@@ -1,0 +1,32 @@
+# What Snail.Swarm.Agent adds to its deploy/compose.yml to stand this server beside its workers.
+#
+# The service is named mcp-playwright because the platform computes the address from that name:
+# http://mcp-playwright:8822/mcp. The browser is in a network of its own: it opens whatever address a
+# model asked for, and from there the platform's own services are not reachable by name. The server
+# stands in both networks.
+services:
+  mcp-playwright:
+    profiles: [ app ]
+    image: ${SWARM_IMAGES:-snail}/s3l-playwright-mcp:${MCP_TAG:-latest}
+    pull_policy: ${MCP_PULL_POLICY:-never}
+    environment:
+      SNAIL_MCP_PLAYWRIGHT_PORT: 8822
+      SNAIL_MCP_PLAYWRIGHT_WEB__SCRAPING__BROWSER_SERVER: ws://playwright-browser:3000/
+    depends_on: [ playwright-browser ]
+    networks: [ default, browsing ]
+    restart: unless-stopped
+    logging: *logging
+
+  # The tag names the browser (153.0), the Playwright client it is paired with (1.62) and the architecture;
+  # it moves together with the Microsoft.Playwright package inside the server, never on its own.
+  playwright-browser:
+    profiles: [ app ]
+    image: ghcr.io/orldev/ff-juggler:153.0-pw1.62-amd64
+    init: true
+    shm_size: 2gb
+    networks: [ browsing ]
+    restart: unless-stopped
+    logging: *logging
+
+networks:
+  browsing:

@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/Snail.MCP.Playwright.csproj" />
+  <Project Path="tests/Snail.MCP.Playwright.Tests.csproj" />
+</Solution>

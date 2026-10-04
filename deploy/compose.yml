@@ -1,0 +1,54 @@
+# The server and the browser it reads through, as one pair.
+#
+#   docker compose -f deploy/compose.yml up -d --build
+#   curl -i http://127.0.0.1:8822/healthz          # 200 once the browser answers
+#
+# A client then opens sessions at http://127.0.0.1:8822/mcp.
+name: s3l-playwright
+
+services:
+  mcp-playwright:
+    image: ${SWARM_IMAGES:-snail}/s3l-playwright-mcp:${MCP_TAG:-latest}
+    build:
+      context: ..
+    restart: unless-stopped
+    depends_on:
+      - browser
+    ports:
+      # On the loopback unless told otherwise: there is no token on /mcp, so the address it is published
+      # at is the whole of its access control.
+      - "${PUBLISH_ADDRESS:-127.0.0.1}:${PUBLISH_PORT:-8822}:8822"
+    environment:
+      SNAIL_MCP_PLAYWRIGHT_PORT: 8822
+      SNAIL_MCP_PLAYWRIGHT_WEB__SCRAPING__BROWSER_SERVER: ws://browser:3000/
+      SNAIL_MCP_PLAYWRIGHT_ENGINES: ${ENGINES:-DuckDuckGo,Bing,Brave}
+    deploy:
+      resources:
+        limits:
+          memory: ${MCP_MEMORY:-512m}
+    networks:
+      - default
+      - browsing
+
+  # Our own Firefox build behind a Playwright browser server. The tag names the three things that have to
+  # match: the browser (153.0), the Playwright client the server speaks to (1.62) and the architecture.
+  # A client of another version is answered 428 and nothing else, so the tag moves together with the
+  # Microsoft.Playwright package inside Snail.Toolkit.Web, never on its own.
+  browser:
+    image: ghcr.io/orldev/ff-juggler:153.0-pw1.62-amd64
+    platform: linux/amd64
+    init: true
+    restart: unless-stopped
+    # Firefox keeps the shared memory of its pages in /dev/shm, and Docker gives 64 MB by default.
+    shm_size: 2gb
+    deploy:
+      resources:
+        limits:
+          memory: ${BROWSER_MEMORY:-4g}
+    # The browser opens whatever address a model asked for, so it lives in a network where the only
+    # other thing is this server: from here a link to http://minio:9000 leads nowhere.
+    networks:
+      - browsing
+
+networks:
+  browsing:

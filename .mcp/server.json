@@ -1,0 +1,125 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
+  "name": "io.github.orldev/snail-mcp-playwright",
+  "description": "MCP server that searches the web and reads pages through a real browser: links for a query, page text in pieces, several pages, a bounded site walk, XPath pieces, screenshots and form walks.",
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "nuget",
+      "identifier": "Snail.MCP.Playwright",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [],
+      "environmentVariables": [
+        {
+          "name": "SNAIL_MCP_PLAYWRIGHT_PORT",
+          "description": "Port to answer sessions on at /mcp; unset means the server is started as a program and speaks stdio to its parent.",
+          "isRequired": false,
+          "default": "0"
+        },
+        {
+          "name": "SNAIL_MCP_PLAYWRIGHT_ENGINES",
+          "description": "Search engines to ask, comma-separated: DuckDuckGo, Bing, Brave, Google. Google answers by address rather than by query and is off by default.",
+          "isRequired": false,
+          "default": "DuckDuckGo,Bing,Brave"
+        },
+        {
+          "name": "SNAIL_MCP_PLAYWRIGHT_BROWSER_PROBE_SECONDS",
+          "description": "Seconds playwright_diagnose waits for the browser before calling it unreachable, 1 to 120.",
+          "isRequired": false,
+          "default": "10"
+        },
+        {
+          "name": "SNAIL_MCP_PLAYWRIGHT_SEARCH_SECONDS",
+          "description": "Seconds one search may take, 5 to 300; an engine that does not open inside them is not asked and says so.",
+          "isRequired": false,
+          "default": "60"
+        },
+        {
+          "name": "SNAIL_MCP_PLAYWRIGHT_ALLOW_PRIVATE_ADDRESSES",
+          "description": "Whether addresses inside the deployment's own network may be read; a developer's switch.",
+          "isRequired": false,
+          "default": "false"
+        },
+        {
+          "name": "SNAIL_MCP_PLAYWRIGHT_PAGE_MEMORY_MINUTES",
+          "description": "Minutes a page that was read is remembered, so the rest of it is served without a second visit, 0 to 120; 0 forgets at once.",
+          "isRequired": false,
+          "default": "10"
+        },
+        {
+          "name": "SNAIL_MCP_PLAYWRIGHT_PAGE_MEMORY_PAGES",
+          "description": "Pages remembered at once, 1 to 256.",
+          "isRequired": false,
+          "default": "16"
+        },
+        {
+          "name": "SNAIL_MCP_PLAYWRIGHT_WEB__SCRAPING__BROWSER_SERVER",
+          "description": "The ws:// address of the Playwright browser server, the ghcr.io/orldev/ff-juggler container.",
+          "isRequired": false,
+          "default": "ws://localhost:3000/"
+        },
+        {
+          "name": "SNAIL_MCP_PLAYWRIGHT_WEB__SCRAPING__ENGINE",
+          "description": "The engine of the browser behind the server: Firefox for the ff-juggler image. It has to agree with the user agent.",
+          "isRequired": false,
+          "default": "Firefox"
+        },
+        {
+          "name": "SNAIL_MCP_PLAYWRIGHT_WEB__SCRAPING__NAVIGATION_TIMEOUT_MS",
+          "description": "Milliseconds one page may take to load.",
+          "isRequired": false,
+          "default": "45000"
+        },
+        {
+          "name": "SNAIL_MCP_PLAYWRIGHT_WEB__IDENTITY__FINGERPRINTS__0__USER_AGENT",
+          "description": "The user agent the server announces; it has to name the browser in the image, or the server refuses to start.",
+          "isRequired": false,
+          "default": "Mozilla/5.0 (X11; Linux x86_64; rv:153.0) Gecko/20100101 Firefox/153.0"
+        },
+        {
+          "name": "SNAIL_MCP_PLAYWRIGHT_WEB__IDENTITY__FINGERPRINTS__0__LOCALE",
+          "description": "The locale a page reads; moves together with the timezone and the accepted languages.",
+          "isRequired": false,
+          "default": "en-US"
+        },
+        {
+          "name": "SNAIL_MCP_PLAYWRIGHT_WEB__IDENTITY__FINGERPRINTS__0__TIMEZONE",
+          "description": "The timezone a page reads, which equals the image's own.",
+          "isRequired": false,
+          "default": "America/New_York"
+        },
+        {
+          "name": "SNAIL_MCP_PLAYWRIGHT_WEB__IDENTITY__FINGERPRINTS__0__ACCEPT_LANGUAGE",
+          "description": "The languages the server asks pages in.",
+          "isRequired": false,
+          "default": "en-US,en;q=0.9"
+        },
+        {
+          "name": "SNAIL_MCP_PLAYWRIGHT_WEB__IDENTITY__PROXIES__0",
+          "description": "An exit to go out through, for the browser and the HTTP engine alike; add PROXIES__1 and so on for more.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "SNAIL_MCP_PLAYWRIGHT_WEB__POLITENESS__MIN_DELAY_PER_HOST",
+          "description": "The gap left between two requests to one host, as hh:mm:ss.",
+          "isRequired": false,
+          "default": "00:00:01"
+        },
+        {
+          "name": "SNAIL_MCP_PLAYWRIGHT_WEB__ROBOTS__IS_OBEYED",
+          "description": "Whether robots.txt is obeyed when a page is read.",
+          "isRequired": false,
+          "default": "false"
+        }
+      ]
+    }
+  ],
+  "repository": {
+    "url": "https://github.com/orldev/Snail.MCP.Playwright",
+    "source": "github"
+  }
+}

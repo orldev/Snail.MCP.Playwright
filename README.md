@@ -1,0 +1,158 @@
+# Snail.MCP.Playwright
+
+An MCP server that lets an agent search the web and read pages through a real browser.
+
+It answers two questions and keeps them apart: *where is this written about* — queries in, links out — and
+*what does this page say* — an address in, its text out. A search never returns the content of a page, and
+a read never takes a query. Everything else it offers is a way of reading more, or more closely.
+
+It is built on [Snail.Toolkit.Web](https://github.com/orldev/Snail.Toolkit.Web) and a Playwright browser
+server, `ghcr.io/orldev/ff-juggler`, which runs in a container of its own. The server holds no browser.
+
+## Tools
+
+| Tool | Question it answers | Cost |
+| --- | --- | --- |
+| `playwright_search` | Where is this written about? 1–5 queries → links with title, snippet and engine. | seconds |
+| `playwright_fetch` | What does this page say? One address → its text, a piece at a time. | seconds |
+| `playwright_fetch_many` | What do these pages say? Up to 10 addresses in one call. | tens of seconds |
+| `playwright_fetch_site` | What does this site say? A bounded walk: sitemap first, links otherwise. | up to minutes |
+| `playwright_extract` | Which pieces of this page? An XPath → the text of each match, or one attribute. | free after a fetch |
+| `playwright_screenshot` | What does this page show? A JPEG of the screen or of the whole page. | seconds |
+| `playwright_perform` | What does it say once the form is filled in? Up to 12 moves, then the resulting text. | seconds per move |
+| `playwright_diagnose` | Is the browser behind the server alive? | instant |
+
+Every answer is JSON with an `ok` flag. A failure carries `error`, a `hint` saying what that kind of failure
+calls for, and whatever was learned before it; in the protocol it is flagged `isError`.
+
+Three things about the answers are deliberate:
+
+- **An empty answer explains itself.** "The engines answered and nothing matched" is an answer; "no engine
+  answered" is an error that says when to ask again. A walk over a site says why it stopped.
+- **A long page comes in pieces.** `next` is the position to pass as `from`; the pieces of one page read
+  within ten minutes cost the site a single visit, and so does an `extract` after a `fetch`.
+- **A refusal is not retried around.** The server spaces its requests to a host, waits as long as a site
+  asks it to, and reports a wall as `Blocked` with the advice to use another source.
+
+## Run it
+
+### Beside its browser, in Docker
+
+```bash
+docker compose -f deploy/compose.yml up -d --build
+curl -i http://127.0.0.1:8822/healthz      # 200 once the browser answers
+```
+
+That stands up the server and the browser as a pair. A client opens sessions at
+`http://127.0.0.1:8822/mcp`. The browser lives in a network of its own, where the only other thing is this
+server — it opens whatever address a model asked for, and from there a link to an internal service leads
+nowhere.
+
+There is no token on `/mcp`: the address the server is published at is the whole of its access control,
+which is why the compose file publishes it on the loopback.
+
+### As a program, for one client
+
+```jsonc
+// .mcp.json — the browser container has to be running on this machine
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "dotnet",
+      "args": ["/path/to/Snail.MCP.Playwright/src/bin/Release/net10.0/Snail.MCP.Playwright.dll"]
+    }
+  }
+}
+```
+
+```bash
+docker run -d --name playwright-browser --init --shm-size=2g -p 3000:3000 ghcr.io/orldev/ff-juggler:153.0-pw1.62-amd64
+```
+
+With no port configured the server speaks stdio to the process that started it and connects to the browser
+at `ws://localhost:3000/`.
+
+## Configuration
+
+Every variable begins with `SNAIL_MCP_PLAYWRIGHT_`. The server's own settings:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `PORT` | — | Port to answer sessions on; unset means stdio. |
+| `ENGINES` | `DuckDuckGo,Bing,Brave` | Search engines to ask. `Google` exists and is off by default: it answers by address, not by query. |
+| `SEARCH_SECONDS` | `60` | How long one search may take; an engine that does not open in time is not asked and says so. |
+| `ALLOW_PRIVATE_ADDRESSES` | `false` | Whether addresses inside the deployment's own network may be read. |
+| `PAGE_MEMORY_MINUTES` | `10` | How long a page that was read is remembered; `0` forgets at once. |
+| `PAGE_MEMORY_PAGES` | `16` | Pages remembered at once. |
+| `BROWSER_PROBE_SECONDS` | `10` | How long `playwright_diagnose` waits for the browser. |
+
+The toolkit's settings travel under the same prefix: `WEB__SECTION__NAME` is the toolkit's
+`Web:Section:Name`. The ones a deployment is likely to touch:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `WEB__SCRAPING__BROWSER_SERVER` | `ws://localhost:3000/` | The Playwright browser server. The image sets `ws://browser:3000/`. |
+| `WEB__IDENTITY__FINGERPRINTS__0__USER_AGENT` | Firefox 153.0 on Linux | Has to name the browser that is really behind the server. |
+| `WEB__IDENTITY__FINGERPRINTS__0__TIMEZONE` | `America/New_York` | Moves together with `LOCALE` and `ACCEPT_LANGUAGE` when the exit moves. |
+| `WEB__POLITENESS__MIN_DELAY_PER_HOST` | `00:00:01` | The gap left between two requests to one host. |
+| `WEB__ROBOTS__IS_OBEYED` | `false` | Whether `robots.txt` is obeyed when reading a page. |
+| `WEB__SCRAPING__NAVIGATION_TIMEOUT_MS` | `45000` | How long one page may take to load. |
+| `WEB__IDENTITY__PROXIES__0` | — | An exit to go out through, for the browser and the HTTP engine alike. |
+
+Two of these are a pair that must not be split. The browser image and the Playwright client inside the
+toolkit have to be the same Playwright version — the image tag says which, `…-pw1.62-…` — and the user
+agent has to name the browser in the image. The toolkit refuses to start on a mismatch of the second kind;
+a mismatch of the first is answered `428` by the browser server.
+
+Only public `http` and `https` addresses are read. A literal address in a private range, the loopback and
+a host name without a dot are refused before anything is sent, because `robots.txt` and the sitemap are
+fetched by this process, which stands inside the deployment's network. A public name that *resolves* to a
+private address is not caught by that rule; the browser's own network is what answers it.
+
+## Snail.Swarm.Agent
+
+The platform reaches the server at an address and names the tools a role may use in it
+(`…/mcp?tool=playwright_search&tool=playwright_fetch`); the server refuses anything else at the door.
+What the platform needs is in `deploy/swarm/`:
+
+- `catalog-entry.json` — the entry for `src/Dashboard/Mcp/catalog.json`;
+- `compose.yml` — the two services for `deploy/compose.yml`, the browser in its own network.
+
+Two facts measured here that the platform's defaults do not cover. The server needs **512 MB**: it idles
+at 105 MB and reached 255 MB after one search and five pages, of which the Playwright driver is 82 MB —
+the generic Nomad template gives 256. And the browser is a container the generic template does not start:
+under Nomad it needs a job of its own, the way the sandbox has one.
+
+A role that researches needs three tools, not eight — every declared tool is paid for in every step:
+
+```json
+{ "servers": ["playwright"], "tools": ["playwright.playwright_search", "playwright.playwright_fetch", "playwright.playwright_fetch_many"] }
+```
+
+## Developing
+
+```bash
+dotnet build
+dotnet test                                                    # no browser needed
+SNAIL_LIVE_BROWSER_SERVER=ws://localhost:3000/ dotnet test     # adds the live checks
+```
+
+Snail.Toolkit.Web is not published yet, so its packages are bundled in `packages/`. After changing the
+toolkit, rebuild them:
+
+```bash
+tools/pack-toolkit.sh            # the toolkit checked out beside this repository
+tools/pack-toolkit.sh /path/to/Snail.Toolkit.Web
+```
+
+The script removes the cached copies as well. The version does not move while the toolkit is unpublished,
+so without that step NuGet keeps serving the package it restored last time.
+
+What a model reads lives in `src/Tools/Prompts/`: `ToolDescriptions.cs` before a call, `Messages.cs` after
+one, `ServerGuidance.cs` once at the start. Guard tests hold those texts to the code — every limit a
+description states, every failure kind the toolkit can report, every move `playwright_perform` accepts —
+and the tool list has a budget, because it is read into every session whether or not a tool is used.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

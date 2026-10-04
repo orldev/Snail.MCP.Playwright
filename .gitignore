@@ -1,0 +1,28 @@
+# What git is not to look at, and nothing else. Add a line when something new appears on disk, not in advance.
+
+# Build output.
+artifacts/
+[Bb]in/
+[Oo]bj/
+[Tt]est[Rr]esults/
+*.binlog
+
+# packages/ IS tracked: it holds the toolkit this server is built on until that toolkit is published,
+# and an image built anywhere else has no other place to restore it from. Only the symbols stay out.
+*.snupkg
+
+# Editors and their per-user state.
+.idea/
+.vs/
+.vscode/
+*.user
+*.suo
+*.DotSettings.user
+_ReSharper*/
+
+# Whatever the operating system leaves behind.
+.DS_Store
+Thumbs.db
+
+# Secrets and local settings of a deployment.
+deploy/.env

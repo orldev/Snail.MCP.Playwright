@@ -1,0 +1,16 @@
+{
+  "key": "playwright",
+  "name": "playwright",
+  "description": "веб через настоящий браузер: поиск ссылок, чтение страниц, обход сайта, куски по XPath, формы и снимки",
+  "image": "ghcr.io/orldev/s3l-playwright-mcp:0.1.0",
+  "port": 8822,
+  "path": "/mcp",
+  "args": [],
+  "secrets": [],
+  "notes": "свой сервер: репозиторий mcp/Snail.MCP.Playwright, контейнер со streamable HTTP. Рабочую копию не трогает — ни корня в адресе, ни тома. Браузера в образе нет: сервер подключается к контейнеру ghcr.io/orldev/ff-juggler:153.0-pw1.62-amd64, который стоит в отдельной сети — он открывает адреса, названные моделью, и внутренние службы из этой сети не видны. Серверу нужно 512 МБ: на холостом ходу 105 МБ, после поиска и пяти страниц 255 МБ; общий шаблон джобы даёт 256. Под Nomad браузеру нужен свой джоб, шаблон mcp-NAME соседний контейнер не поднимает. Роли выдавать не все восемь инструментов: исследователю хватает playwright_search, playwright_fetch и playwright_fetch_many; playwright_perform нажимает кнопки на сайте и единственный не объявлен read-only.",
+  "env": {
+    "SNAIL_MCP_PLAYWRIGHT_WEB__SCRAPING__BROWSER_SERVER": "ws://playwright-browser:3000/"
+  },
+  "requires": "Контейнер браузера ghcr.io/orldev/ff-juggler:153.0-pw1.62-amd64 рядом с сервером, достижимый по адресу из SNAIL_MCP_PLAYWRIGHT_WEB__SCRAPING__BROWSER_SERVER; версия Playwright в теге образа обязана совпадать с клиентом в сервере (1.62)",
+  "diagnoseTool": "playwright_diagnose"
+}
