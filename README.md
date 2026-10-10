@@ -17,7 +17,8 @@ server, `ghcr.io/orldev/ff-juggler`, which runs in a container of its own. The s
 | `playwright_fetch` | What does this page say? One address → its text, a piece at a time. | seconds |
 | `playwright_fetch_many` | What do these pages say? Up to 10 addresses in one call. | tens of seconds |
 | `playwright_fetch_site` | What does this site say? A bounded walk: sitemap first, links otherwise. | up to minutes |
-| `playwright_extract` | Which pieces of this page? An XPath → the text of each match, or one attribute. | free after a fetch |
+| `playwright_extract` | Which pieces of this page? A CSS selector or an XPath → the text of each match, or one attribute. | free after a fetch |
+| `playwright_extract_fields` | What are these values on this page? Named fields, each with selectors tried in order → a record, the selector that matched each field and the fields none found. | free after a fetch |
 | `playwright_screenshot` | What does this page show? A JPEG of the screen or of the whole page. | seconds |
 | `playwright_perform` | What does it say once the form is filled in? Up to 12 moves, then the resulting text. | seconds per move |
 | `playwright_diagnose` | Is the browser behind the server alive? | instant |
@@ -25,12 +26,16 @@ server, `ghcr.io/orldev/ff-juggler`, which runs in a container of its own. The s
 Every answer is JSON with an `ok` flag. A failure carries `error`, a `hint` saying what that kind of failure
 calls for, and whatever was learned before it; in the protocol it is flagged `isError`.
 
-Three things about the answers are deliberate:
+Four things about the answers are deliberate:
 
 - **An empty answer explains itself.** "The engines answered and nothing matched" is an answer; "no engine
   answered" is an error that says when to ask again. A walk over a site says why it stopped.
 - **A long page comes in pieces.** `next` is the position to pass as `from`; the pieces of one page read
   within ten minutes cost the site a single visit, and so does an `extract` after a `fetch`.
+- **A page read again and again keeps its selectors.** `playwright_extract_fields` names the selector that
+  matched each field; a collection repeated every month passes those first and a broader one behind them, and a
+  site that was rebuilt shows up as fields under `missing` rather than as a record quietly half empty. CSS and
+  XPath are named as such, never guessed from the shape of the string.
 - **A refusal is not retried around.** The server spaces its requests to a host, waits as long as a site
   asks it to, and reports a wall as `Blocked` with the advice to use another source.
 

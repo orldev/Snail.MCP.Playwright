@@ -73,6 +73,12 @@ public static class Limits
     /// <summary>Characters one selected piece may run to; an expression that matched the whole body is a mistake, not a request.</summary>
     public const int SelectedCharacters = 2_000;
 
+    /// <summary>Fields one record may name.</summary>
+    public const int MostFields = 30;
+
+    /// <summary>Selectors one field may try, CSS and XPath together.</summary>
+    public const int MostCandidates = 5;
+
     /// <summary>Moves one walk over a page may make.</summary>
     public const int MostMoves = 12;
 

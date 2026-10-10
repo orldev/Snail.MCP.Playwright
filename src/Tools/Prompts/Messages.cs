@@ -92,11 +92,37 @@ public static class Messages
     /// <summary>What is said when a valid expression matched nothing.</summary>
     public const string NothingSelected = "the expression is valid and matched nothing on this page: the page may name that part differently, or build it only after a move";
 
-    /// <summary>Why an empty expression is not asked.</summary>
-    public const string XPathMissing = "xpath is empty: name the elements to take, such as //table//tr";
+    /// <summary>Why an extraction that names its elements twice, or not at all, is not asked.</summary>
+    public const string ExpressionUnnamed = "name the elements by css or by xpath, exactly one of the two";
 
     /// <summary>How an expression is written, for a caller whose expression would not parse.</summary>
-    public const string XPathHint = "XPath 1.0 over the rendered markup, with element and attribute names in lower case: //h2, //table[@id='prices']//tr, //a[contains(@href,'/docs/')].";
+    public const string ExpressionHint = "CSS as a browser takes it — table#prices tr, a.title, li > span:nth-child(2) — or XPath 1.0 over the rendered markup with lower-case names — //table[@id='prices']//tr, //a[contains(@href,'/docs/')].";
+
+    /// <summary>How a field is written, for a caller that wrote one wrongly.</summary>
+    public const string FieldHint = "A field is { name, css: [...], xpath: [...], attribute, many }: what to call the value, the selectors to try in order — CSS first, then XPath — the attribute to take instead of the text, and whether every match is wanted.";
+
+    /// <summary>Why a record of no fields, or of too many, is refused.</summary>
+    public static string FieldsOutOfRange(int count) =>
+        $"fields is 1 to {Limits.MostFields}, not {count}";
+
+    /// <summary>Why a field without a name cannot be answered.</summary>
+    public const string FieldUnnamed = "every field needs a name: it is the key its value comes back under";
+
+    /// <summary>Why two fields of one name cannot be answered.</summary>
+    public static string FieldTwice(string name) =>
+        $"two fields are named '{name}': each value comes back under its name, so names are unique";
+
+    /// <summary>Why a field with no selector, or with too many, is refused.</summary>
+    public static string CandidatesOutOfRange(string name, int count) =>
+        $"field '{name}' tries {count} selectors, and a field tries 1 to {Limits.MostCandidates}";
+
+    /// <summary>Why a field whose selector does not parse stops the whole record.</summary>
+    public static string FieldInvalid(string name, Expression expression, string fault) =>
+        $"field '{name}': {ExpressionInvalid(expression, fault)}";
+
+    /// <summary>What is said of a record some of whose fields no selector found.</summary>
+    public static string FieldsMissing(int missing, int fields) =>
+        $"{missing} of {fields} fields matched no selector: the site may have been rebuilt — read the page with playwright_fetch and find them anew";
 
     /// <summary>How a move is written, for a caller that wrote one wrongly.</summary>
     public const string MoveHint = "A move is { action, css or label, value, expect, pattern, withinSeconds }: what to do, the element named one way, what to enter, and the reaction the site owes.";
@@ -111,8 +137,8 @@ public static class Messages
     public const string ExpectationHalf = "expect and pattern go together: the kind of reaction, and what to look for";
 
     /// <summary>Why an expression that does not parse is not asked.</summary>
-    public static string XPathInvalid(string fault) =>
-        $"the expression is not valid XPath: {fault}";
+    public static string ExpressionInvalid(Expression expression, string fault) =>
+        $"'{expression.Text}' is not a valid {(expression.Kind == ExpressionKind.Css ? "CSS selector" : "XPath expression")}: {fault}";
 
     /// <summary>Why a number of pieces outside the range is refused rather than trimmed.</summary>
     public static string SelectedOutOfRange(int limit) =>

@@ -4,7 +4,7 @@ using Snail.Toolkit.Web.Text;
 
 namespace Snail.MCP.Playwright.Tests.Adapters;
 
-public sealed class XPathSelectionTests
+public sealed class MarkupSelectionTests
 {
     private const string Catalogue =
         """
@@ -21,13 +21,13 @@ public sealed class XPathSelectionTests
 
     private static readonly Uri Page = new("https://example.org/catalogue/index.html");
 
-    private readonly XPathSelection _selection = new(new TextExtraction());
+    private readonly MarkupSelection _selection = new(new TextExtraction());
 
     /// <summary>A row comes back as its cells a space apart — text, the way the page reader would give it, not markup.</summary>
     [Fact]
     public void Take_TheRowsOfATable_ReturnsEachRowAsItsText()
     {
-        var selected = _selection.Take(Catalogue, "//table[@id='prices']//tr", null, Page, 50);
+        var selected = _selection.Take(Catalogue, Expression.XPath("//table[@id='prices']//tr"), null, Page, 50);
 
         Assert.Equal(["Grain Price", "Wheat 210", "Barley 185"], selected.Pieces);
         Assert.Equal(3, selected.Matched);
@@ -37,7 +37,7 @@ public sealed class XPathSelectionTests
     [Fact]
     public void Take_TheLinksOfAList_ReturnsAbsoluteAddresses()
     {
-        var selected = _selection.Take(Catalogue, "//ul//a", "href", Page, 50);
+        var selected = _selection.Take(Catalogue, Expression.XPath("//ul//a"), "href", Page, 50);
 
         Assert.Equal(["https://example.org/docs/wheat", "https://elsewhere.example/barley"], selected.Pieces);
     }
@@ -45,7 +45,7 @@ public sealed class XPathSelectionTests
     [Fact]
     public void Take_MoreMatchesThanAsked_ReturnsTheLimitAndSaysHowManyMatched()
     {
-        var selected = _selection.Take(Catalogue, "//tr", null, Page, 2);
+        var selected = _selection.Take(Catalogue, Expression.XPath("//tr"), null, Page, 2);
 
         Assert.Equal(2, selected.Pieces.Count);
         Assert.Equal(3, selected.Matched);
@@ -55,7 +55,7 @@ public sealed class XPathSelectionTests
     [Fact]
     public void Take_AnExpressionMatchingNothing_IsValidAndEmpty()
     {
-        var selected = _selection.Take(Catalogue, "//article", null, Page, 50);
+        var selected = _selection.Take(Catalogue, Expression.XPath("//article"), null, Page, 50);
 
         Assert.True(selected.IsValid);
         Assert.Empty(selected.Pieces);
@@ -65,7 +65,7 @@ public sealed class XPathSelectionTests
     [Fact]
     public void Take_AnExpressionThatIsNotXPath_SaysWhatTheParserSaid()
     {
-        var selected = _selection.Take(Catalogue, "//table[@id=", null, Page, 50);
+        var selected = _selection.Take(Catalogue, Expression.XPath("//table[@id="), null, Page, 50);
 
         Assert.False(selected.IsValid);
         Assert.False(string.IsNullOrWhiteSpace(selected.Fault));
@@ -77,9 +77,35 @@ public sealed class XPathSelectionTests
     {
         string page = $"<html><body><p>{new string('a', Limits.SelectedCharacters * 2)}</p></body></html>";
 
-        var selected = _selection.Take(page, "//p", null, Page, 50);
+        var selected = _selection.Take(page, Expression.XPath("//p"), null, Page, 50);
 
         Assert.EndsWith("…", selected.Pieces[0], StringComparison.Ordinal);
         Assert.Equal(Limits.SelectedCharacters + 1, selected.Pieces[0].Length);
+    }
+
+    /// <summary>The same row a browser's CSS would name comes back the same way an XPath brings it.</summary>
+    [Fact]
+    public void Take_ACssSelector_ReturnsTheSameRowsAsTheXPath()
+    {
+        var selected = _selection.Take(Catalogue, Expression.Css("table#prices tr"), null, Page, 50);
+
+        Assert.Equal(["Grain Price", "Wheat 210", "Barley 185"], selected.Pieces);
+    }
+
+    [Fact]
+    public void Take_ACssSelectorForAnAttribute_ReturnsAbsoluteAddresses()
+    {
+        var selected = _selection.Take(Catalogue, Expression.Css("ul a"), "href", Page, 50);
+
+        Assert.Equal(["https://example.org/docs/wheat", "https://elsewhere.example/barley"], selected.Pieces);
+    }
+
+    [Fact]
+    public void Take_ASelectorThatIsNotCss_SaysWhatTheParserSaid()
+    {
+        var selected = _selection.Take(Catalogue, Expression.Css("table[id="), null, Page, 50);
+
+        Assert.False(selected.IsValid);
+        Assert.False(string.IsNullOrWhiteSpace(selected.Fault));
     }
 }

@@ -24,15 +24,18 @@ public sealed class CloserReadingTests
     {
         var reading = new PageReading(reader, Rules, new PageMemory(Config, TimeProvider.System));
 
-        return (new PageExtraction(reading, Rules, new XPathSelection(new TextExtraction())), reading);
+        return (new PageExtraction(reading, Rules, new MarkupSelection(new TextExtraction())), reading);
     }
+
+    private static PageFields Fields(FakeReader reader) =>
+        new(new PageReading(reader, Rules, new PageMemory(Config, TimeProvider.System)), Rules, new MarkupSelection(new TextExtraction()));
 
     [Fact]
     public async Task Extract_FromAPage_ReturnsThePiecesTheExpressionNames()
     {
         var (extraction, _) = Extraction(new FakeReader().Serving(Page, "Wheat 210", html: Markup));
 
-        var answer = await extraction.SelectAsync(Page, "//tr", null, Limits.DefaultSelected);
+        var answer = await extraction.SelectAsync(Page, "//tr", null, null, Limits.DefaultSelected);
 
         Assert.True(answer.IsSuccess);
         Assert.Equal("Wheat 210", answer.Data!["pieces"]![0]!.GetValue<string>());
@@ -47,7 +50,7 @@ public sealed class CloserReadingTests
         var (extraction, reading) = Extraction(reader);
 
         await reading.ReadAsync(Page, 0, Limits.DefaultCharacters);
-        await extraction.SelectAsync(Page, "//td", null, Limits.DefaultSelected);
+        await extraction.SelectAsync(Page, "//td", null, null, Limits.DefaultSelected);
 
         Assert.Single(reader.Visited);
     }
@@ -57,15 +60,15 @@ public sealed class CloserReadingTests
     {
         var (extraction, _) = Extraction(new FakeReader().Serving(Page, "Wheat 210", html: Markup));
 
-        var answer = await extraction.SelectAsync(Page, "//article", null, Limits.DefaultSelected);
+        var answer = await extraction.SelectAsync(Page, "//article", null, null, Limits.DefaultSelected);
 
         Assert.True(answer.IsSuccess);
         Assert.Contains("matched nothing", answer.Data!["note"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
     [Theory]
-    [InlineData(Page, "//table[@id=", 50, "not valid XPath")]
-    [InlineData(Page, " ", 50, "xpath is empty")]
+    [InlineData(Page, "//table[@id=", 50, "not a valid XPath expression")]
+    [InlineData(Page, " ", 50, "exactly one of the two")]
     [InlineData(Page, "//tr", 0, "limit is 1 to 200")]
     [InlineData(Page, "//tr", 201, "limit is 1 to 200")]
     [InlineData("http://minio:9000/", "//tr", 50, "not on the public web")]
@@ -73,10 +76,90 @@ public sealed class CloserReadingTests
     {
         var (extraction, _) = Extraction(new FakeReader().Serving(Page, "Wheat 210", html: Markup));
 
-        var answer = await extraction.SelectAsync(url, xpath, null, limit);
+        var answer = await extraction.SelectAsync(url, xpath, null, null, limit);
 
         Assert.False(answer.IsSuccess);
         Assert.Contains(said, answer.Error, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Extract_ByCss_ReturnsThePiecesTheSelectorNames()
+    {
+        var (extraction, _) = Extraction(new FakeReader().Serving(Page, "Wheat 210", html: Markup));
+
+        var answer = await extraction.SelectAsync(Page, null, "td", null, Limits.DefaultSelected);
+
+        Assert.Equal(["Wheat", "210"], answer.Data!["pieces"]!.AsArray().Select(piece => piece!.GetValue<string>()));
+    }
+
+    /// <summary>Which language an expression is in is said, never guessed: both at once is a question with two answers.</summary>
+    [Fact]
+    public async Task Extract_NamingCssAndXPathAtOnce_IsRefused()
+    {
+        var (extraction, _) = Extraction(new FakeReader().Serving(Page, "Wheat 210", html: Markup));
+
+        var answer = await extraction.SelectAsync(Page, "//td", "td", null, Limits.DefaultSelected);
+
+        Assert.Contains("exactly one of the two", answer.Error, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A site read every month is rebuilt now and then: the selector of last time misses, the broader one behind it
+    /// finds the value, and the answer names it so the caller can keep it.
+    /// </summary>
+    [Fact]
+    public async Task Fields_FirstSelectorMissesAndTheSecondMatches_TakesTheValueAndNamesTheSelector()
+    {
+        var fields = Fields(new FakeReader().Serving(Page, "Wheat 210", html: Markup));
+
+        var answer = await fields.TakeAsync(Page, [new Field("price", Css: ["td.price", "tr td:nth-child(2)"])]);
+
+        Assert.Equal("210", answer.Data!["fields"]!["price"]!.GetValue<string>());
+        Assert.Equal("tr td:nth-child(2)", answer.Data["found"]![0]!["css"]!.GetValue<string>());
+        Assert.Null(answer.Data["missing"]);
+    }
+
+    [Fact]
+    public async Task Fields_NoSelectorMatches_ListsTheFieldAsMissingAndSaysWhy()
+    {
+        var fields = Fields(new FakeReader().Serving(Page, "Wheat 210", html: Markup));
+
+        var answer = await fields.TakeAsync(Page, [new Field("grain", Css: ["td:first-child"]), new Field("stock", Css: [".stock"], XPath: ["//span[@class='stock']"])]);
+
+        Assert.Equal("Wheat", answer.Data!["fields"]!["grain"]!.GetValue<string>());
+        Assert.Equal(["stock"], answer.Data["missing"]!.AsArray().Select(name => name!.GetValue<string>()));
+        Assert.Contains("rebuilt", answer.Data["note"]!.GetValue<string>(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Fields_ManyWanted_ReturnsEveryMatch()
+    {
+        var fields = Fields(new FakeReader().Serving(Page, "Wheat 210", html: Markup));
+
+        var answer = await fields.TakeAsync(Page, [new Field("cells", XPath: ["//td"], Many: true)]);
+
+        Assert.Equal(["Wheat", "210"], answer.Data!["fields"]!["cells"]!.AsArray().Select(cell => cell!.GetValue<string>()));
+    }
+
+    [Fact]
+    public async Task Fields_ASelectorThatDoesNotParse_StopsTheRecordAndNamesTheField()
+    {
+        var fields = Fields(new FakeReader().Serving(Page, "Wheat 210", html: Markup));
+
+        var answer = await fields.TakeAsync(Page, [new Field("price", Css: ["td[id="])]);
+
+        Assert.StartsWith("field 'price': 'td[id=' is not a valid CSS selector", answer.Error, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Fields_TwoOfOneName_AreRefusedBeforeThePageIsRead()
+    {
+        var reader = new FakeReader().Serving(Page, "Wheat 210", html: Markup);
+
+        var answer = await Fields(reader).TakeAsync(Page, [new Field("price", Css: ["td"]), new Field("price", Css: ["tr"])]);
+
+        Assert.Contains("two fields are named 'price'", answer.Error, StringComparison.Ordinal);
+        Assert.Empty(reader.Visited);
     }
 
     [Fact]

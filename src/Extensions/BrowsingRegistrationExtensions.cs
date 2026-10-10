@@ -46,8 +46,9 @@ public static class BrowsingRegistrationExtensions
         private IServiceCollection AddCloserReading(IConfiguration settings)
         {
             services.AddPageAgent(settings);
-            services.TryAddSingleton<IMarkupSelection, XPathSelection>();
+            services.TryAddSingleton<IMarkupSelection, MarkupSelection>();
             services.TryAddSingleton<PageExtraction>();
+            services.TryAddSingleton<PageFields>();
             services.TryAddSingleton<PagePictures>();
             services.TryAddSingleton<PageWalking>();
 

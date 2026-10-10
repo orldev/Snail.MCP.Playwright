@@ -8,18 +8,28 @@ namespace Snail.MCP.Playwright.Tools;
 
 /// <summary>What plain reading does not give: pieces of a page by expression, a picture of it, and the page after a form was filled in.</summary>
 [McpServerToolType]
-public sealed class CloserTools(PageExtraction extraction, PagePictures pictures, PageWalking walking)
+public sealed class CloserTools(PageExtraction extraction, PageFields records, PagePictures pictures, PageWalking walking)
 {
-    /// <summary>Returns what an XPath matches in a page.</summary>
+    /// <summary>Returns what a CSS selector or an XPath matches in a page.</summary>
     [McpServerTool(Name = "playwright_extract", ReadOnly = true, OpenWorld = true)]
     [Description(ToolDescriptions.Extract)]
     public async Task<CallToolResult> ExtractAsync(
         [Description(ToolDescriptions.ExtractUrl)] string url,
-        [Description(ToolDescriptions.ExtractXPath)] string xpath,
+        [Description(ToolDescriptions.ExtractXPath)] string? xpath = null,
+        [Description(ToolDescriptions.ExtractCss)] string? css = null,
         [Description(ToolDescriptions.ExtractAttribute)] string? attribute = null,
         [Description(ToolDescriptions.ExtractLimit)] int limit = Limits.DefaultSelected,
         CancellationToken cancellationToken = default) =>
-        ToolResponse.From(await extraction.SelectAsync(url, xpath, attribute, limit, cancellationToken));
+        ToolResponse.From(await extraction.SelectAsync(url, xpath, css, attribute, limit, cancellationToken));
+
+    /// <summary>Returns a record of named values from a page, and the selector that found each.</summary>
+    [McpServerTool(Name = "playwright_extract_fields", ReadOnly = true, OpenWorld = true)]
+    [Description(ToolDescriptions.ExtractFields)]
+    public async Task<CallToolResult> ExtractFieldsAsync(
+        [Description(ToolDescriptions.ExtractFieldsUrl)] string url,
+        [Description(ToolDescriptions.ExtractFieldsFields)] Field[] fields,
+        CancellationToken cancellationToken = default) =>
+        ToolResponse.From(await records.TakeAsync(url, fields, cancellationToken));
 
     /// <summary>Returns a picture of a page.</summary>
     [McpServerTool(Name = "playwright_screenshot", ReadOnly = true, OpenWorld = true)]

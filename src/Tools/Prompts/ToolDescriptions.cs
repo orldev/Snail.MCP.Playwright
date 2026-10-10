@@ -22,7 +22,7 @@ public static class ToolDescriptions
         """
         Find where something is written about: queries in, links out — title, address, a short snippet and
         the engine that offered each. It never returns the content of a page; read a result with
-        playwright_fetch. Several phrasings of one question in a single call cost less than several calls.
+        playwright_fetch. Several phrasings go in one call.
         The engines field says what each engine did: an empty list when engines answered means nothing
         matched, while no engine answering is an error that says when to ask again.
         """;
@@ -37,9 +37,8 @@ public static class ToolDescriptions
     /// <summary><c>playwright_fetch</c></summary>
     public const string Fetch =
         """
-        Read one page: its address in, its title and readable text out, loaded by a real browser so a
-        page built by script is read the way a person sees it. It takes an address, never a query. A long
-        text comes in pieces: next is the position to pass as from for the following piece, and null when
+        Read one page: its address in, its title and readable text out, read by a real browser as a
+        person sees it. A long text comes in pieces: next is the position to pass as from for the following piece, and null when
         the page has ended; the pieces of a page read within 10 minutes cost the site a single visit. A
         failure names its kind — blocked, forbidden by robots.txt, empty, timed out — and says what to do
         instead of repeating the call.
@@ -73,8 +72,8 @@ public static class ToolDescriptions
     public const string FetchSite =
         """
         Read a site rather than a page: one address to start from, and the pages of that site are found in
-        its own sitemap, or by following its links when it publishes none. This is the expensive tool —
-        tens of seconds to minutes, one paced visit per page — so use it only when the question is about a
+        its own sitemap, or by following its links when it publishes none. It is the expensive tool,
+        minutes and a visit per page: use it only when the question is about a
         site as a whole, and playwright_fetch_many when the addresses are already known. The answer says
         why it stopped: any stop but Exhausted means the site has more than was read.
         """;
@@ -97,23 +96,40 @@ public static class ToolDescriptions
     /// <summary><c>playwright_extract</c></summary>
     public const string Extract =
         """
-        Take named pieces out of a page instead of its whole text: an XPath in, the text of every element
-        it matches out — or one attribute of each, such as href. For the rows of a table, the links of a
-        list, the prices of a catalogue: what playwright_fetch returns as one long text. The page is the one
-        playwright_fetch read; asking about it again within 10 minutes costs the site no further visit.
+        Take pieces out of a page instead of its whole text: a CSS selector or an XPath in, exactly one, and
+        the text of each element it matches out — or one attribute of each, such as href. For the rows of a
+        table or the links of a list. A page read within 10 minutes is not visited again.
         """;
 
     /// <summary>The <c>url</c> of <c>playwright_extract</c>.</summary>
     public const string ExtractUrl = "Absolute http or https address of a public page.";
 
     /// <summary>The <c>xpath</c> of <c>playwright_extract</c>.</summary>
-    public const string ExtractXPath = "XPath 1.0 naming the elements, over the rendered markup with lower-case names: //table[@id='prices']//tr, //h2, //a[contains(@href,'/docs/')].";
+    public const string ExtractXPath = "XPath 1.0 over the rendered markup, lower-case names: //table[@id='prices']//tr, //h2.";
+
+    /// <summary>The <c>css</c> of <c>playwright_extract</c>.</summary>
+    public const string ExtractCss = "CSS selector as a browser takes it: table#prices tr, a[href*='/docs/'].";
 
     /// <summary>The <c>attribute</c> of <c>playwright_extract</c>.</summary>
-    public const string ExtractAttribute = "Attribute to return instead of the text, such as href or src; a relative address comes back absolute. Omit it for the text.";
+    public const string ExtractAttribute = "Attribute to return instead of the text, such as href; a relative address comes back absolute.";
 
     /// <summary>The <c>limit</c> of <c>playwright_extract</c>.</summary>
     public const string ExtractLimit = "Pieces to return at most, 1 to 200; 50 by default.";
+
+    /// <summary><c>playwright_extract_fields</c></summary>
+    public const string ExtractFields =
+        """
+        Take a record of named values out of a page. Each field tries its selectors in order, css before
+        xpath, and the first that matches gives the value. The answer names the selector that matched each
+        field — keep it and pass it first next time — and lists under missing the fields no selector found:
+        read the page with playwright_fetch and find those anew.
+        """;
+
+    /// <summary>The <c>url</c> of <c>playwright_extract_fields</c>.</summary>
+    public const string ExtractFieldsUrl = "Absolute http or https address of a public page.";
+
+    /// <summary>The <c>fields</c> of <c>playwright_extract_fields</c>.</summary>
+    public const string ExtractFieldsFields = "1 to 30 fields, each { name, css: [...], xpath: [...], attribute, many } with 1 to 5 selectors a field; attribute such as href instead of the text; many for every match.";
 
     /// <summary><c>playwright_screenshot</c></summary>
     public const string Screenshot =

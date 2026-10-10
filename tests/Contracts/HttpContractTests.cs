@@ -111,6 +111,27 @@ public sealed class HttpContractTests
         Assert.Contains("move 2: 'dance' is not a move", refused.Text(), StringComparison.Ordinal);
     }
 
+    /// <summary>The fields arrive as JSON written by a model; a pair refused by name before any visit was read the way the description promises.</summary>
+    [Fact]
+    public async Task ExtractFields_WithFieldsSentAsJson_ReadsThemAndNamesTheOneThatIsWrong()
+    {
+        await using var server = await ListeningServer.StartAsync();
+        await using var client = await server.ConnectAsync();
+
+        var refused = await client.CallToolAsync("playwright_extract_fields", new Dictionary<string, object?>
+        {
+            ["url"] = "https://example.org/prices",
+            ["fields"] = new object[]
+            {
+                new Dictionary<string, object?> { ["name"] = "price", ["css"] = new[] { "td.price" } },
+                new Dictionary<string, object?> { ["name"] = "price", ["xpath"] = new[] { "//td[2]" }, ["many"] = true }
+            }
+        });
+
+        Assert.Equal(true, refused.IsError);
+        Assert.Contains("two fields are named 'price'", refused.Text(), StringComparison.Ordinal);
+    }
+
     /// <summary>The page is paid for once: a structured copy beside the text would hand a model every page twice.</summary>
     [Fact]
     public async Task Answer_OfAnyTool_CarriesItsPayloadOnce()

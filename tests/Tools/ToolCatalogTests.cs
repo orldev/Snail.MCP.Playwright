@@ -84,8 +84,9 @@ public sealed partial class ToolCatalogTests
     /// The tool list is read into the context of every session before anything is asked, so its size is
     /// spent whether or not a tool is used. The platform measured 65 tools at 12 800 tokens — 39% of a
     /// 32k window — which is why this server is small on purpose and the budget says so out loud. Measured on
-    /// 2026-10-04 at 5661 characters over eight tools, which a client receives as a list of 8.5 KB; a ninth
-    /// tool, or a paragraph added to a description, has to argue with the ceiling.
+    /// 2026-10-04 at 5661 characters over eight tools, which a client receives as a list of 8.5 KB; the ninth,
+    /// playwright_extract_fields, took it to 6142 on 2026-10-10 only after the extraction texts were cut by half,
+    /// so the next tool, or the next paragraph, has to take something out first.
     /// </summary>
     [Fact]
     public void TheToolList_ReadIntoEverySession_StaysWithinItsBudget()
@@ -141,6 +142,13 @@ public sealed partial class ToolCatalogTests
             $"{Limits.FewestCharacters} to {Limits.MostCharactersEach}; {Limits.DefaultSiteCharactersEach} by default",
             ToolDescriptions.FetchSiteCharacters,
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ExtractFieldsDescription_StatesTheLimitsTheCodeHolds()
+    {
+        Assert.Contains($"1 to {Limits.MostFields} fields", ToolDescriptions.ExtractFieldsFields, StringComparison.Ordinal);
+        Assert.Contains($"1 to {Limits.MostCandidates} selectors a field", ToolDescriptions.ExtractFieldsFields, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -22,9 +22,11 @@ public static class ServerGuidance
         several known addresses in one call. playwright_fetch_site walks a whole site and takes minutes:
         it is for a question about a site, never a way to find one page.
 
-        Three more tools are for what plain reading does not give. playwright_extract takes named pieces
-        out of a page by XPath — the rows of a table, the links of a list. playwright_perform fills a form
-        in and reads what the page says afterwards. playwright_screenshot returns a picture, for a page
+        Four more tools are for what plain reading does not give. playwright_extract takes named pieces
+        out of a page by CSS or XPath — the rows of a table, the links of a list. playwright_extract_fields
+        takes a record of named values, each with selectors tried in order, and says which one matched: for
+        a page read again and again, keep the selectors that matched and pass them first next time.
+        playwright_perform fills a form in and reads what the page says afterwards. playwright_screenshot returns a picture, for a page
         whose content is drawn rather than written. Each costs more than a read; reach for one only when
         the text of the page was not enough.
 
