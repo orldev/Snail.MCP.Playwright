@@ -1,5 +1,4 @@
 using ModelContextProtocol.Client;
-using Snail.MCP.Playwright.Configuration;
 using Snail.MCP.Playwright.Tools.Prompts;
 using Snail.Sdk.Mcp.Testing;
 
@@ -20,7 +19,7 @@ public sealed class StdioContractTests
 
         var listed = await client.ListToolsAsync();
 
-        Assert.Equal(ThisAssembly.Name, client.ServerInfo.Name);
+        Assert.Equal("s3l-mcp-playwright", client.ServerInfo.Name);
         Assert.Equal(ServerGuidance.Instructions, client.ServerInstructions);
         Assert.Equal(Catalog.Names, [.. listed.Select(tool => tool.Name).Order(StringComparer.Ordinal)]);
     }

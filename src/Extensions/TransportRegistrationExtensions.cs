@@ -1,10 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
-using ModelContextProtocol.Protocol;
 using Snail.MCP.Playwright.Adapters;
 using Snail.MCP.Playwright.Application;
 using Snail.MCP.Playwright.Configuration;
 using Snail.MCP.Playwright.Tools;
 using Snail.MCP.Playwright.Tools.Prompts;
+using Snail.Sdk.Mcp.Hosting;
 
 namespace Snail.MCP.Playwright.Extensions;
 
@@ -44,7 +44,7 @@ public static class TransportRegistrationExtensions
             return services
                 .AddMcpServer(server =>
                 {
-                    server.ServerInfo = new Implementation { Name = ThisAssembly.Name, Version = ThisAssembly.Version };
+                    server.ServerInfo = ServerIdentity.Of(typeof(ThisAssembly).Assembly);
                     server.ServerInstructions = ServerGuidance.Instructions;
                 })
                 .RefuseWhatWasNotGranted()
