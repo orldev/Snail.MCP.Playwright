@@ -136,7 +136,7 @@ public sealed class CloserReadingTests
     {
         var fields = Fields(new FakeReader().Serving(Page, "Wheat 210", html: Markup));
 
-        var answer = await fields.TakeAsync(Page, [new Field("cells", XPath: ["//td"], Many: true)]);
+        var answer = await fields.TakeAsync(Page, [new Field("cells", XPath: ["//td"], IsEveryMatchWanted: true)]);
 
         Assert.Equal(["Wheat", "210"], answer.Data!["fields"]!["cells"]!.AsArray().Select(cell => cell!.GetValue<string>()));
     }

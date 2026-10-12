@@ -45,7 +45,7 @@ public sealed class PageWalking(IPageAgent agent, AddressRules rules)
     /// <summary>What is wrong with a move as written, or null when it can be made.</summary>
     internal static string? Fault(Move move)
     {
-        if (!Named<StepKind>(move.Action, out var kind))
+        if (!TryReadKind<StepKind>(move.Action, out var kind))
             return Messages.ActionUnknown(move.Action);
 
         if (string.IsNullOrWhiteSpace(move.Css) == string.IsNullOrWhiteSpace(move.Label))
@@ -57,7 +57,7 @@ public sealed class PageWalking(IPageAgent agent, AddressRules rules)
         if (string.IsNullOrWhiteSpace(move.Expect) != string.IsNullOrWhiteSpace(move.Pattern))
             return Messages.ExpectationHalf;
 
-        if (move.Expect is not null && !Named<EffectKind>(move.Expect, out _))
+        if (move.Expect is not null && !TryReadKind<EffectKind>(move.Expect, out _))
             return Messages.ExpectationUnknown(move.Expect);
 
         return move.WithinSeconds is < 1 or > Limits.MostWithinSeconds ? Messages.WithinOutOfRange(move.WithinSeconds.Value) : null;
@@ -65,7 +65,7 @@ public sealed class PageWalking(IPageAgent agent, AddressRules rules)
 
     private static Step Stepped(Move move)
     {
-        Named<StepKind>(move.Action, out var kind);
+        TryReadKind<StepKind>(move.Action, out var kind);
 
         return new Step(kind, move.Label is { Length: > 0 } label ? Spot.Labelled(label) : Spot.Css(move.Css!))
         {
@@ -75,12 +75,12 @@ public sealed class PageWalking(IPageAgent agent, AddressRules rules)
     }
 
     private static Effect? Expected(Move move) =>
-        Named<EffectKind>(move.Expect, out var kind)
+        TryReadKind<EffectKind>(move.Expect, out var kind)
             ? new Effect(kind, move.Pattern!) { Within = TimeSpan.FromSeconds(move.WithinSeconds ?? Limits.DefaultWithinSeconds) }
             : null;
 
     /// <summary>Reads a kind by its name alone: a number would parse as an enum and name nothing a caller meant.</summary>
-    private static bool Named<TKind>(string? name, out TKind kind)
+    private static bool TryReadKind<TKind>(string? name, out TKind kind)
         where TKind : struct, Enum
     {
         kind = default;

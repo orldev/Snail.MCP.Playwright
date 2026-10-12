@@ -43,7 +43,7 @@ public sealed class PageFields(PageReading pages, AddressRules rules, IMarkupSel
                 continue;
             }
 
-            values[field.Name] = field.Many ? new JsonArray([.. taken.Pieces.Select(piece => (JsonNode)piece)]) : taken.Pieces[0];
+            values[field.Name] = field.IsEveryMatchWanted ? new JsonArray([.. taken.Pieces.Select(piece => (JsonNode)piece)]) : taken.Pieces[0];
             found.Add(new JsonObject
             {
                 ["name"] = field.Name,
@@ -67,7 +67,7 @@ public sealed class PageFields(PageReading pages, AddressRules rules, IMarkupSel
     {
         foreach (var candidate in field.Candidates)
         {
-            var selected = selection.Take(html, candidate, PageExtraction.Named(field.Attribute), origin, field.Many ? Limits.MostSelected : 1);
+            var selected = selection.Take(html, candidate, PageExtraction.Named(field.Attribute), origin, field.IsEveryMatchWanted ? Limits.MostSelected : 1);
 
             if (!selected.IsValid)
                 return new Taken(candidate, [], 0, selected.Fault);

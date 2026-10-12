@@ -1,0 +1,24 @@
+<Project>
+  <!-- Central package management: every version this repository uses, once. -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup Label="Runtime">
+    <PackageVersion Include="Fizzler.Systems.HtmlAgilityPack" Version="1.2.1" />
+    <PackageVersion Include="ModelContextProtocol" Version="2.2.0" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
+  </ItemGroup>
+  <!-- Bundled in packages/ until the toolkit is published; tools/pack-toolkit.sh rebuilds them. -->
+  <ItemGroup Label="Bundled">
+    <PackageVersion Include="Snail.Toolkit.Web.Scraping.Agent" Version="0.1.0-local" />
+    <PackageVersion Include="Snail.Toolkit.Web.Search.Browser" Version="0.1.0-local" />
+    <PackageVersion Include="Snail.Toolkit.Web.Search.Browser.Agent" Version="0.1.0-local" />
+  </ItemGroup>
+  <ItemGroup Label="Testing">
+    <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
+  </ItemGroup>
+</Project>

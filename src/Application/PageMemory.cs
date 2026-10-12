@@ -37,12 +37,9 @@ public sealed class PageMemory(ServerConfig config, TimeProvider clock)
 
     private void Forget()
     {
-        var kept = _pages.Values
-            .Where(IsFresh)
-            .OrderByDescending(page => page.FetchedAt)
-            .Take(config.PageMemoryPages)
-            .Select(page => page.Requested)
-            .ToHashSet();
+        var fresh = _pages.Values.Where(IsFresh);
+        var newest = fresh.OrderByDescending(page => page.FetchedAt).Take(config.PageMemoryPages);
+        var kept = newest.Select(page => page.Requested).ToHashSet();
 
         foreach (var address in _pages.Keys.Where(address => !kept.Contains(address)))
             _pages.TryRemove(address, out _);

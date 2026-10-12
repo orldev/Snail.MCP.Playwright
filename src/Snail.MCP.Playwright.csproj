@@ -1,48 +1,34 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Snail.Sdk.Mcp">
 
+    <!--
+        Framework-dependent: Playwright drives the browser through its Node driver and reflection, which a native program
+        cannot. Stdio for the client that started it, HTTP beside the browser in Docker.
+    -->
     <PropertyGroup>
-        <OutputType>Exe</OutputType>
-        <TargetFramework>net10.0</TargetFramework>
-        <LangVersion>latest</LangVersion>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <InvariantGlobalization>true</InvariantGlobalization>
-        <RollForward>LatestMajor</RollForward>
+        <SnailMcpNative>false</SnailMcpNative>
+        <SnailMcpTransport>Both</SnailMcpTransport>
+        <SnailMcpContainer>true</SnailMcpContainer>
     </PropertyGroup>
 
     <PropertyGroup>
-        <PackAsTool>true</PackAsTool>
-        <ToolCommandName>snail-mcp-playwright</ToolCommandName>
-        <PackageType>McpServer</PackageType>
-        <PackageId>Snail.MCP.Playwright</PackageId>
         <Version>0.1.0</Version>
-        <Authors>orldev</Authors>
         <Description>MCP server that lets AI agents search the web and read pages through a real browser: links for a query, the text of a page, several pages at once and a bounded walk over a site. Built on Snail.Toolkit.Web and a Playwright browser server; answers sessions at an address beside the browser in Docker, or speaks stdio to the client that started it.</Description>
         <PackageTags>mcp;mcp-server;modelcontextprotocol;ai;claude;playwright;search;scraping;dotnet-tool</PackageTags>
-        <PackageReadmeFile>README.md</PackageReadmeFile>
-        <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageProjectUrl>https://github.com/orldev/Snail.MCP.Playwright</PackageProjectUrl>
         <RepositoryUrl>https://github.com/orldev/Snail.MCP.Playwright</RepositoryUrl>
-        <RepositoryType>git</RepositoryType>
     </PropertyGroup>
 
     <ItemGroup>
-        <None Include="..\README.md" Pack="true" PackagePath="/" Visible="false"/>
-        <None Include="..\.mcp\server.json" Pack="true" PackagePath="/.mcp/" Visible="false"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Fizzler.Systems.HtmlAgilityPack" Version="1.2.1"/>
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.11"/>
-        <PackageReference Include="ModelContextProtocol" Version="2.2.0"/>
-        <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0"/>
+        <PackageReference Include="Fizzler.Systems.HtmlAgilityPack"/>
+        <PackageReference Include="ModelContextProtocol"/>
+        <PackageReference Include="ModelContextProtocol.AspNetCore"/>
     </ItemGroup>
 
     <!-- Bundled in packages/ until the toolkit is published; tools/pack-toolkit.sh rebuilds them. -->
     <ItemGroup>
-        <PackageReference Include="Snail.Toolkit.Web.Scraping.Agent" Version="0.1.0-local"/>
-        <PackageReference Include="Snail.Toolkit.Web.Search.Browser" Version="0.1.0-local"/>
-        <PackageReference Include="Snail.Toolkit.Web.Search.Browser.Agent" Version="0.1.0-local"/>
+        <PackageReference Include="Snail.Toolkit.Web.Scraping.Agent"/>
+        <PackageReference Include="Snail.Toolkit.Web.Search.Browser"/>
+        <PackageReference Include="Snail.Toolkit.Web.Search.Browser.Agent"/>
     </ItemGroup>
 
     <ItemGroup>

@@ -1,0 +1,399 @@
+[
+  {
+    "name": "playwright_search",
+    "description": "Find where something is written about: queries in, links out \u2014 title, address, a short snippet and\nthe engine that offered each. It never returns the content of a page; read a result with\nplaywright_fetch. Several phrasings go in one call.\nThe engines field says what each engine did: an empty list when engines answered means nothing\nmatched, while no engine answering is an error that says when to ask again.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "queries": {
+          "description": "1 to 5 search queries, each up to 400 characters. Plain words work with every engine; operators such as site: or filetype: only with the engines read through the browser.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "limit": {
+          "description": "How many links to return, 1 to 30; 10 by default.",
+          "type": "integer",
+          "default": 10
+        }
+      },
+      "required": [
+        "queries"
+      ]
+    },
+    "annotations": {
+      "openWorldHint": true,
+      "readOnlyHint": true
+    },
+    "skill": null
+  },
+  {
+    "name": "playwright_fetch",
+    "description": "Read one page: its address in, its title and readable text out, read by a real browser as a\nperson sees it. A long text comes in pieces: next is the position to pass as from for the following piece, and null when\nthe page has ended; the pieces of a page read within 10 minutes cost the site a single visit. A\nfailure names its kind \u2014 blocked, forbidden by robots.txt, empty, timed out \u2014 and says what to do\ninstead of repeating the call.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "description": "Absolute http or https address of a public page.",
+          "type": "string"
+        },
+        "from": {
+          "description": "Position in the text to start at: 0 by default, or the next of the previous piece.",
+          "type": "integer",
+          "default": 0
+        },
+        "maxCharacters": {
+          "description": "Characters of text to return, 500 to 100000; 20000 by default.",
+          "type": "integer",
+          "default": 20000
+        }
+      },
+      "required": [
+        "url"
+      ]
+    },
+    "annotations": {
+      "openWorldHint": true,
+      "readOnlyHint": true
+    },
+    "skill": null
+  },
+  {
+    "name": "playwright_fetch_many",
+    "description": "Read several pages in one call: addresses in, a piece of each page\u0027s text out, and a page that\nfailed listed beside the others rather than failing the call. Use it after a search, to read the\nresults worth reading at once. A page cut short carries next: pass it to playwright_fetch as from\nto read on.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "urls": {
+          "description": "1 to 10 absolute http or https addresses of public pages.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "maxCharactersEach": {
+          "description": "Characters of text to return for each page, 500 to 20000; 4000 by default.",
+          "type": "integer",
+          "default": 4000
+        }
+      },
+      "required": [
+        "urls"
+      ]
+    },
+    "annotations": {
+      "openWorldHint": true,
+      "readOnlyHint": true
+    },
+    "skill": null
+  },
+  {
+    "name": "playwright_fetch_site",
+    "description": "Read a site rather than a page: one address to start from, and the pages of that site are found in\nits own sitemap, or by following its links when it publishes none. It is the expensive tool,\nminutes and a visit per page: use it only when the question is about a\nsite as a whole, and playwright_fetch_many when the addresses are already known. The answer says\nwhy it stopped: any stop but Exhausted means the site has more than was read.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "description": "Address to start from, which also decides the site: pages on other hosts are not read.",
+          "type": "string"
+        },
+        "maxPages": {
+          "description": "Pages to read at most, 1 to 50; 10 by default.",
+          "type": "integer",
+          "default": 10
+        },
+        "maxDepth": {
+          "description": "Links from the start to follow when the site has no sitemap, 0 to 5; 2 by default.",
+          "type": "integer",
+          "default": 2
+        },
+        "seconds": {
+          "description": "Seconds the walk may take, 30 to 600; 120 by default. What was read when they run out is returned.",
+          "type": "integer",
+          "default": 120
+        },
+        "maxCharactersEach": {
+          "description": "Characters of text to return for each page, 500 to 20000; 2000 by default.",
+          "type": "integer",
+          "default": 2000
+        }
+      },
+      "required": [
+        "url"
+      ]
+    },
+    "annotations": {
+      "openWorldHint": true,
+      "readOnlyHint": true
+    },
+    "skill": null
+  },
+  {
+    "name": "playwright_extract",
+    "description": "Take pieces out of a page instead of its whole text: a CSS selector or an XPath in, exactly one, and\nthe text of each element it matches out \u2014 or one attribute of each, such as href. For the rows of a\ntable or the links of a list. A page read within 10 minutes is not visited again.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "description": "Absolute http or https address of a public page.",
+          "type": "string"
+        },
+        "xpath": {
+          "description": "XPath 1.0 over the rendered markup, lower-case names: //table[@id=\u0027prices\u0027]//tr, //h2.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "css": {
+          "description": "CSS selector as a browser takes it: table#prices tr, a[href*=\u0027/docs/\u0027].",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "attribute": {
+          "description": "Attribute to return instead of the text, such as href; a relative address comes back absolute.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "limit": {
+          "description": "Pieces to return at most, 1 to 200; 50 by default.",
+          "type": "integer",
+          "default": 50
+        }
+      },
+      "required": [
+        "url"
+      ]
+    },
+    "annotations": {
+      "openWorldHint": true,
+      "readOnlyHint": true
+    },
+    "skill": null
+  },
+  {
+    "name": "playwright_extract_fields",
+    "description": "Take a record of named values out of a page. Each field tries its selectors in order, css before\nxpath, and the first that matches gives the value. The answer names the selector that matched each\nfield \u2014 keep it and pass it first next time \u2014 and lists under missing the fields no selector found:\nread the page with playwright_fetch and find those anew.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "description": "Absolute http or https address of a public page.",
+          "type": "string"
+        },
+        "fields": {
+          "description": "1 to 30 fields, each { name, css: [...], xpath: [...], attribute, many } with 1 to 5 selectors a field; attribute such as href instead of the text; many for every match.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "css": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string"
+                },
+                "default": null
+              },
+              "xPath": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string"
+                },
+                "default": null
+              },
+              "attribute": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "default": null
+              },
+              "many": {
+                "type": "boolean",
+                "default": false
+              },
+              "candidates": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "Css",
+                        "XPath"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "text",
+                    "kind"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "url",
+        "fields"
+      ]
+    },
+    "annotations": {
+      "openWorldHint": true,
+      "readOnlyHint": true
+    },
+    "skill": null
+  },
+  {
+    "name": "playwright_screenshot",
+    "description": "Look at a page instead of reading it: an address in, a picture of what the browser drew out. For\nwhat text cannot carry \u2014 a chart, a map, a layout, a page whose content is an image. It is slower\nand heavier than playwright_fetch and says nothing a picture does not show, so read first and look\nonly when the text is not enough.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "description": "Absolute http or https address of a public page.",
+          "type": "string"
+        },
+        "wholePage": {
+          "description": "True to picture the page from top to bottom, up to 8000 pixels; false, the default, pictures the screen a visitor first sees.",
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "url"
+      ]
+    },
+    "annotations": {
+      "openWorldHint": true,
+      "readOnlyHint": true
+    },
+    "skill": null
+  },
+  {
+    "name": "playwright_perform",
+    "description": "Use a page instead of only reading it: open an address, make a few moves on it, and get the text of\nthe page that results. For what a page says only after a form is filled in \u2014 a registry search, a\nfilter, a site\u0027s own search box. A move the site did not react to is reported with what the page\noffered instead: rewrite the move from that rather than repeat it. It does not sign in and does not\nsolve a challenge.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "description": "Absolute http or https address of the public page to start on.",
+          "type": "string"
+        },
+        "moves": {
+          "description": "1 to 12 moves, made in order. action: type (key by key into a field), pick (press the offered\nsuggestion whose text matches value), choose (an option of a real select list, by its visible text),\nclick, or press (a key while the element has the focus; Enter unless value names another). Name the\nelement one way: css, a selector, or label, the visible caption of a field. expect with pattern\nholds a move to the site\u0027s reaction: request (the page asked for a URL containing pattern), appears\nor vanishes (an element matching the selector in pattern), text (the page came to contain the\nphrase). withinSeconds is how long that reaction is waited for, 1 to 30; 5 by default.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string"
+              },
+              "css": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "default": null
+              },
+              "label": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "default": null
+              },
+              "value": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "default": null
+              },
+              "expect": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "default": null
+              },
+              "pattern": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "default": null
+              },
+              "withinSeconds": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "default": null
+              }
+            },
+            "required": [
+              "action"
+            ]
+          }
+        },
+        "maxCharacters": {
+          "description": "Characters of the resulting page\u0027s text to return, 500 to 100000; 20000 by default.",
+          "type": "integer",
+          "default": 20000
+        }
+      },
+      "required": [
+        "url",
+        "moves"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": true,
+      "openWorldHint": true,
+      "readOnlyHint": false
+    },
+    "skill": null
+  },
+  {
+    "name": "playwright_diagnose",
+    "description": "Say what state this server is in: its version, whether the browser it reads pages through answers,\nand which search engines it asks. Call it when a tool reports the browser unavailable, not before\nevery task.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "skill": null
+  }
+]
