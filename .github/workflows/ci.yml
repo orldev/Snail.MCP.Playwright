@@ -16,6 +16,5 @@ jobs:
   ci:
     uses: orldev/Snail.Sdk/.github/workflows/mcp-ci.yml@v1
     with:
-      name: Snail.MCP.Playwright
-      native: false
       contract-variable: SNAIL_PLAYWRIGHT_SERVER
+      contract-filter: FullyQualifiedName~StdioContract

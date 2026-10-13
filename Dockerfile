@@ -7,7 +7,9 @@
 # connects to a browser server — ghcr.io/orldev/ff-juggler — that runs in a container of its own, in
 # a network of its own. deploy/compose.yml stands the two up together.
 
-# Pinned to the band global.json asks for: on the floating tag a newer feature band refuses the build.
+# The SDK is pinned to the band global.json asks for: on the floating sdk:10.0 a newer feature band would one day
+# refuse the build. The server is framework-dependent, as Playwright's driver and reflection keep it out of Native AOT:
+# -p:PublishAot=false, onto the ASP.NET runtime.
 FROM mcr.microsoft.com/dotnet/sdk:10.0.302 AS build
 ARG TARGETARCH
 WORKDIR /source
@@ -16,9 +18,9 @@ COPY . .
 
 # The architecture is named so that Playwright ships the one node driver this image can run, rather
 # than the drivers of every platform it supports: about a hundred megabytes of the difference.
-RUN dotnet publish src/Snail.MCP.Playwright.csproj -c Release -o /app -a "$TARGETARCH" --self-contained false -p:UseAppHost=false
+RUN dotnet publish src/Snail.MCP.Playwright.csproj -c Release -o /app -a "$TARGETARCH" --self-contained false -p:UseAppHost=false -p:PublishAot=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.11
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app .
 
