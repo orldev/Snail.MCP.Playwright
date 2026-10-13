@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Snail.MCP.Playwright.Configuration;
+using Snail.Sdk.Mcp.Hosting;
 
 namespace Snail.MCP.Playwright.Tests.Support;
 
@@ -14,20 +15,23 @@ internal static class Deployment
     /// <summary>An address a connection is refused at immediately: the discard port, on the loopback.</summary>
     public const string NoBrowser = "ws://127.0.0.1:9/";
 
+    /// <summary>What every variable of this server begins with.</summary>
+    public static string Prefix { get; } = ServerSettings.PrefixOf(ServerConfigExtensions.Name);
+
     public static Dictionary<string, string> Variables(params (string Name, string Value)[] own)
     {
         var variables = new Dictionary<string, string>
         {
-            [$"{EnvironmentSettings.Prefix}WEB__SCRAPING__BROWSER_SERVER"] = NoBrowser,
-            [$"{EnvironmentSettings.Prefix}BROWSER_PROBE_SECONDS"] = "5"
+            [$"{Prefix}WEB__SCRAPING__BROWSER_SERVER"] = NoBrowser,
+            [$"{Prefix}BROWSER_PROBE_SECONDS"] = "5"
         };
 
         foreach (var (name, value) in own)
-            variables[$"{EnvironmentSettings.Prefix}{name}"] = value;
+            variables[$"{Prefix}{name}"] = value;
 
         return variables;
     }
 
     public static IConfiguration Settings(params (string Name, string Value)[] own) =>
-        ServerConfigExtensions.Settings(Variables(own));
+        ServerConfigExtensions.Settings(null, Variables(own));
 }

@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Snail.MCP.Playwright.Configuration;
+using Snail.Sdk.Mcp.Hosting;
 
 namespace Snail.MCP.Playwright.Tests.Contracts;
 
@@ -24,7 +25,7 @@ public sealed partial class RegistryManifestContractTests
 
         Assert.All(typeof(ServerConfig).GetProperties(), setting =>
         {
-            string variable = $"{EnvironmentSettings.Prefix}{Screaming().Replace(setting.Name, "_$1").ToUpperInvariant()}";
+            string variable = $"{Deployment.Prefix}{Screaming().Replace(setting.Name, "_$1").ToUpperInvariant()}";
             var named = Variables.SingleOrDefault(candidate => candidate["name"]!.GetValue<string>() == variable);
 
             Assert.True(named is not null, variable);
@@ -36,10 +37,10 @@ public sealed partial class RegistryManifestContractTests
     [Fact]
     public void Manifest_StatesTheBrowserDefaults_TheServerIsStartedWith()
     {
-        var settings = ServerConfigExtensions.Settings(new Dictionary<string, string>());
+        var settings = ServerConfigExtensions.Settings(null, new Dictionary<string, string>());
 
         var stated = Variables
-            .Select(variable => (Key: EnvironmentSettings.ToConfigurationKey(variable["name"]!.GetValue<string>()[EnvironmentSettings.Prefix.Length..]), Default: variable["default"]?.GetValue<string>()))
+            .Select(variable => (Key: EnvironmentSettings.ToConfigurationKey(variable["name"]!.GetValue<string>()[Deployment.Prefix.Length..]), Default: variable["default"]?.GetValue<string>()))
             .Where(variable => settings[variable.Key] is not null);
 
         Assert.All(stated, variable => Assert.Equal(settings[variable.Key], variable.Default));
@@ -73,9 +74,9 @@ public sealed partial class RegistryManifestContractTests
     public void CatalogEntry_AndThePlatformsComposeBlock_PointTheServerAtTheSameBrowser()
     {
         string compose = Repository.Read("deploy", "swarm", "compose.yml");
-        string address = Entry["env"]![$"{EnvironmentSettings.Prefix}WEB__SCRAPING__BROWSER_SERVER"]!.GetValue<string>();
+        string address = Entry["env"]![$"{Deployment.Prefix}WEB__SCRAPING__BROWSER_SERVER"]!.GetValue<string>();
 
-        Assert.Contains($"{EnvironmentSettings.Prefix}WEB__SCRAPING__BROWSER_SERVER: {address}", compose, StringComparison.Ordinal);
+        Assert.Contains($"{Deployment.Prefix}WEB__SCRAPING__BROWSER_SERVER: {address}", compose, StringComparison.Ordinal);
         Assert.Contains($"  {new Uri(address).Host}:", compose, StringComparison.Ordinal);
         Assert.Contains($"image: {BrowserDefaults.Image}", compose, StringComparison.Ordinal);
         Assert.Contains("  mcp-playwright:", compose, StringComparison.Ordinal);

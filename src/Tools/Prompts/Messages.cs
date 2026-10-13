@@ -1,4 +1,5 @@
 using Snail.MCP.Playwright.Configuration;
+using Snail.Sdk.Mcp.Hosting;
 using Snail.Toolkit.Web.Scraping;
 using Snail.Toolkit.Web.Scraping.Agent;
 using Snail.Toolkit.Web.Search;
@@ -211,7 +212,7 @@ public static class Messages
     /// <summary>What to do when the browser server does not answer.</summary>
     public static string BrowserUnreachable(string? server) =>
         $"No browser answers at {server ?? "the configured address"}. Start the {BrowserDefaults.Image} container, " +
-        $"or point {EnvironmentSettings.Prefix}WEB__SCRAPING__BROWSER_SERVER at the one that is running. " +
+        $"or point {ServerSettings.PrefixOf(ServerConfigExtensions.Name)}WEB__SCRAPING__BROWSER_SERVER at the one that is running. " +
         "Searching DuckDuckGo needs no browser; every other tool does.";
 
     /// <summary>What a failed page read calls for, the site's own request to be left alone included.</summary>

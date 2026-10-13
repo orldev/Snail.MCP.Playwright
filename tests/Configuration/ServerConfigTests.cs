@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Snail.MCP.Playwright.Configuration;
 using Snail.MCP.Playwright.Domain;
+using Snail.Sdk.Mcp.Hosting;
 
 namespace Snail.MCP.Playwright.Tests.Configuration;
 
@@ -17,15 +18,15 @@ public sealed class ServerConfigTests
     [Fact]
     public void Variable_OfAnotherProgram_IsNotASetting()
     {
-        var read = EnvironmentSettings.Read(new Dictionary<string, string> { ["PORT"] = "1", ["SNAIL_MCP_GIT_PORT"] = "2" });
+        var settings = ServerConfigExtensions.Settings(null, new Dictionary<string, string> { ["PORT"] = "1", ["SNAIL_MCP_GIT_PORT"] = "2" });
 
-        Assert.Empty(read);
+        Assert.Equal(0, ServerConfigExtensions.Read(settings).Port);
     }
 
     [Fact]
     public void Settings_WithNothingConfigured_DescribeTheBundledBrowser()
     {
-        var settings = ServerConfigExtensions.Settings(new Dictionary<string, string>());
+        var settings = ServerConfigExtensions.Settings(null, new Dictionary<string, string>());
 
         Assert.Equal(BrowserDefaults.Server, settings["Web:Scraping:BrowserServer"]);
         Assert.Equal("Firefox", settings["Web:Scraping:Engine"]);
@@ -41,10 +42,54 @@ public sealed class ServerConfigTests
         Assert.Equal("ws://browser:3000/", settings["Web:Scraping:BrowserServer"]);
     }
 
+    /// <summary>The settings file holds the server's settings and the toolkit's alike, over the browser defaults.</summary>
+    [Fact]
+    public void Settings_FromASettingsFile_ReachTheServerAndTheToolkit()
+    {
+        var folder = Directory.CreateTempSubdirectory("snail-playwright-");
+
+        try
+        {
+            string file = Path.Combine(folder.FullName, "config.json");
+            File.WriteAllText(file, """{ "Engines": "Bing", "Web": { "Scraping": { "BrowserServer": "ws://browser:3000/" } } }""");
+
+            var settings = ServerConfigExtensions.Settings(file, new Dictionary<string, string>());
+
+            Assert.Equal("ws://browser:3000/", settings["Web:Scraping:BrowserServer"]);
+            Assert.Equal([SearchEngines.Bing], SearchEngines.Named(ServerConfigExtensions.Read(settings).Engines));
+        }
+        finally
+        {
+            folder.Delete(recursive: true);
+        }
+    }
+
+    /// <summary>A variable is what a deployment says for this one run, so it overrules the file a person keeps.</summary>
+    [Fact]
+    public void Settings_InTheFileAndInAVariable_HearTheVariable()
+    {
+        var folder = Directory.CreateTempSubdirectory("snail-playwright-");
+
+        try
+        {
+            string file = Path.Combine(folder.FullName, "config.json");
+            File.WriteAllText(file, """{ "Engines": "Bing", "PageMemoryPages": 16 }""");
+
+            var config = ServerConfigExtensions.Read(ServerConfigExtensions.Settings(file, Deployment.Variables(("ENGINES", "Brave"))));
+
+            Assert.Equal([SearchEngines.Brave], SearchEngines.Named(config.Engines));
+            Assert.Equal(16, config.PageMemoryPages);
+        }
+        finally
+        {
+            folder.Delete(recursive: true);
+        }
+    }
+
     [Fact]
     public void Config_WithNothingConfigured_SpeaksStdioAndAsksTheDefaultEngines()
     {
-        var config = ServerConfigExtensions.Read(ServerConfigExtensions.Settings(new Dictionary<string, string>()));
+        var config = ServerConfigExtensions.Read(ServerConfigExtensions.Settings(null, new Dictionary<string, string>()));
 
         Assert.Equal(0, config.Port);
         Assert.Equal([SearchEngines.DuckDuckGo, SearchEngines.Bing, SearchEngines.Brave], SearchEngines.Named(config.Engines));

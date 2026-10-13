@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Snail.MCP.Playwright.Configuration;
+using Snail.Sdk.Mcp.Hosting;
 
 namespace Snail.MCP.Playwright.Tests.Contracts;
 

@@ -79,6 +79,18 @@ at `ws://localhost:3000/`.
 
 ## Configuration
 
+The settings come from the settings file and from the environment variables under `SNAIL_MCP_PLAYWRIGHT_`, and
+a variable wins over the file. A file named in `$SNAIL_MCP_PLAYWRIGHT_CONFIG` is the only one read, and when it is
+missing no file is; otherwise the file is the first of these that exists: `./.s3l-mcp-playwright.json`,
+`./s3l-mcp-playwright.json`, `~/.config/s3l-mcp-playwright/config.json`, `~/.s3l-mcp-playwright.json`. A machine's
+settings, and above all anything secret such as a proxy that carries its credentials, belong in
+`~/.config/s3l-mcp-playwright/config.json` (`chmod 600`), never in a launchd job or in a client's registration, which
+travel wherever they are copied. Its fields are the variables' names after the prefix, a double underscore nesting:
+
+```json
+{ "Engines": "DuckDuckGo,Bing", "Web": { "Identity": { "Proxies": ["http://user:password@proxy:8080"] } } }
+```
+
 Every variable begins with `SNAIL_MCP_PLAYWRIGHT_`. The server's own settings:
 
 | Variable | Default | Meaning |

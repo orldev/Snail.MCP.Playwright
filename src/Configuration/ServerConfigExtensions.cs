@@ -1,20 +1,33 @@
+using System.Collections;
 using Microsoft.Extensions.Configuration;
+using Snail.Sdk.Mcp.Hosting;
 
 namespace Snail.MCP.Playwright.Configuration;
 
-/// <summary>Builds the settings the server runs on: the browser defaults, then the environment.</summary>
+/// <summary>Builds the settings the server runs on: the browser defaults, then the settings file, then the variables.</summary>
 public static class ServerConfigExtensions
 {
-    /// <summary>Everything configured, for this server and for the toolkit beneath it.</summary>
+    /// <summary>The server's short name: its settings file is <c>~/.config/s3l-mcp-playwright/config.json</c>, its variables begin with <c>SNAIL_MCP_PLAYWRIGHT_</c>.</summary>
+    /// <remarks>
+    /// One prefix carries both this server's own settings and the toolkit's: <c>SNAIL_MCP_PLAYWRIGHT_PORT</c>
+    /// is the server's, <c>SNAIL_MCP_PLAYWRIGHT_WEB__SCRAPING__BROWSER_SERVER</c> is the toolkit's
+    /// <c>Web:Scraping:BrowserServer</c>, and the settings file holds the same keys.
+    /// </remarks>
+    public const string Name = "playwright";
+
+    /// <summary>Everything configured, for this server and for the toolkit beneath it: the first settings file of Snail.Sdk's chain, then the variables, which win.</summary>
     /// <remarks>
     /// Built apart from the host's own configuration on purpose: an <c>appsettings.json</c> lying in the
     /// working directory of whoever started the server, or an unprefixed variable of theirs, is not a
     /// setting of this server and must not become one by accident.
     /// </remarks>
-    public static IConfiguration Settings(System.Collections.IDictionary? variables = null) =>
+    public static IConfiguration Settings() => Settings(ServerSettings.FileOf(Name), Environment.GetEnvironmentVariables());
+
+    /// <summary>The browser defaults under the settings of <paramref name="file"/>, when there is one, under the server's variables among <paramref name="variables"/>.</summary>
+    public static IConfiguration Settings(string? file, IDictionary variables) =>
         new ConfigurationBuilder()
             .AddInMemoryCollection(BrowserDefaults.Settings)
-            .AddInMemoryCollection(EnvironmentSettings.Read(variables ?? Environment.GetEnvironmentVariables()))
+            .AddServerSettings(Name, file, variables)
             .Build();
 
     /// <summary>What the settings say the server is, read before there is a host to read it into.</summary>
