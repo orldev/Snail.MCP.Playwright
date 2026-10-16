@@ -20,8 +20,9 @@ public static class Piece
     /// <summary>The piece as a caller reads it: where the page is, how much of it this is, and the text.</summary>
     public static JsonObject Described(PageContent page, int from, int maxCharacters)
     {
-        string text = Cut(page.Text, from, maxCharacters);
-        int next = from + text.Length;
+        int start = Whole(page.Text, from);
+        string text = Cut(page.Text, start, maxCharacters);
+        int next = start + text.Length;
 
         return new JsonObject
         {
@@ -30,7 +31,7 @@ public static class Piece
             ["title"] = page.Title,
             ["status"] = page.StatusCode,
             ["fetchedAt"] = page.FetchedAt.ToString("O"),
-            ["characters"] = new JsonObject { ["from"] = from, ["returned"] = text.Length, ["total"] = page.Text.Length },
+            ["characters"] = new JsonObject { ["from"] = start, ["returned"] = text.Length, ["total"] = page.Text.Length },
             ["next"] = next < page.Text.Length ? next : null,
             ["text"] = text
         };
@@ -46,4 +47,13 @@ public static class Piece
 
         return text[from..end];
     }
+
+    /// <summary>The position itself, or one earlier when it points between the halves of one character.</summary>
+    /// <remarks>
+    /// <c>next</c> is always placed before a pair, but <c>from</c> is any number a model writes, and a piece opening
+    /// with the low half of a character was serialised as U+FFFD — the character lost, the pieces no longer adding
+    /// up to the page. Found by the audit of 2026-10-16; <c>characters.from</c> reports where the piece really starts.
+    /// </remarks>
+    private static int Whole(string text, int from) =>
+        from > 0 && from < text.Length && char.IsLowSurrogate(text[from]) ? from - 1 : from;
 }

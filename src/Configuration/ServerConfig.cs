@@ -41,4 +41,11 @@ public sealed class ServerConfig
 
     /// <summary>Pages remembered at once; the one read longest ago gives way.</summary>
     public int PageMemoryPages { get; set; } = 16;
+
+    /// <summary>Megabytes of markup and text the remembered pages may hold together; the oldest give way first, and the page read last is kept whatever its size.</summary>
+    /// <remarks>
+    /// A ceiling in pages alone is no ceiling: the toolkit cuts neither the markup nor the text of a page, and
+    /// 32 ordinary heavy pages held 257 MB on 2026-10-16 — half of what the deployment gives the whole server.
+    /// </remarks>
+    public int PageMemoryMegabytes { get; set; } = 64;
 }

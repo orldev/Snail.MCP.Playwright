@@ -145,6 +145,19 @@ public sealed class HttpContractTests
         Assert.Null(answer.StructuredContent);
     }
 
+    /// <summary>A page in a browser always sends an Origin and an agent's client never does, so the header alone tells them apart.</summary>
+    [Fact]
+    public async Task Request_CarryingAnOrigin_IsRefusedBeforeTheServerReadsIt()
+    {
+        await using var server = await ListeningServer.StartAsync();
+        using var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("Origin", "https://page.example");
+
+        var answer = await client.PostAsync(new Uri($"{server.Address}{McpServerHost.Path}"), new StringContent("{}", System.Text.Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.Forbidden, answer.StatusCode);
+    }
+
     [Fact]
     public async Task Health_WithNoBrowserRunning_AnswersUnavailable()
     {

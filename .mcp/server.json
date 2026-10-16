@@ -56,6 +56,12 @@
           "default": "16"
         },
         {
+          "name": "SNAIL_MCP_PLAYWRIGHT_PAGE_MEMORY_MEGABYTES",
+          "description": "Megabytes of markup and text the remembered pages may hold together, 1 to 1024; the oldest give way first, and the page read last is kept whatever its size.",
+          "isRequired": false,
+          "default": "64"
+        },
+        {
           "name": "SNAIL_MCP_PLAYWRIGHT_WEB__SCRAPING__BROWSER_SERVER",
           "description": "The ws:// address of the Playwright browser server, the ghcr.io/orldev/ff-juggler container.",
           "isRequired": false,
@@ -168,6 +174,12 @@
           "description": "Pages remembered at once, 1 to 256.",
           "isRequired": false,
           "default": "16"
+        },
+        {
+          "name": "SNAIL_MCP_PLAYWRIGHT_PAGE_MEMORY_MEGABYTES",
+          "description": "Megabytes of markup and text the remembered pages may hold together, 1 to 1024; the oldest give way first, and the page read last is kept whatever its size.",
+          "isRequired": false,
+          "default": "64"
         },
         {
           "name": "SNAIL_MCP_PLAYWRIGHT_WEB__SCRAPING__BROWSER_SERVER",

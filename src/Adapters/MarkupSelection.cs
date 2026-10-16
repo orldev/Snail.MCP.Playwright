@@ -18,20 +18,37 @@ public sealed class MarkupSelection(ITextExtraction text) : IMarkupSelection
     /// <inheritdoc/>
     public Selection Take(string html, Expression expression, string? attribute, Uri address, int limit)
     {
+        if (string.IsNullOrWhiteSpace(expression.Text))
+            return Selection.Invalid("the expression is empty");
+
         var root = Markup.Read(html).DocumentNode;
 
         try
         {
-            IReadOnlyList<HtmlNode> matched = expression.Kind == ExpressionKind.Css
-                ? [.. root.QuerySelectorAll(expression.Text)]
-                : [.. root.SelectNodes(expression.Text) ?? Enumerable.Empty<HtmlNode>()];
+            var matched = Matched(root, expression);
+            var said = matched.Select(node => Said(node, attribute, address));
+            var worthSaying = said.Where(piece => piece.Length > 0);
+            IReadOnlyList<string> pieces = [.. worthSaying.Take(limit)];
 
-            return new Selection([.. matched.Select(node => Said(node, attribute, address)).Where(piece => piece.Length > 0).Take(limit)], matched.Count);
+            return new Selection(pieces, matched.Count);
         }
-        catch (Exception refused) when (refused is XPathException or FormatException or InvalidOperationException or NotSupportedException)
+        catch (Exception refused) when (refused is XPathException or FormatException or ArgumentException or InvalidOperationException or NotSupportedException)
         {
             return Selection.Invalid(refused.Message);
         }
+    }
+
+    /// <summary>Every element the expression names, in document order.</summary>
+    /// <remarks>
+    /// The parser refuses an empty selector with an <see cref="ArgumentException"/>, which the catch above did not
+    /// name before the audit of 2026-10-16: an empty CSS selector left the port as a stack trace.
+    /// </remarks>
+    private static IReadOnlyList<HtmlNode> Matched(HtmlNode root, Expression expression)
+    {
+        if (expression.Kind == ExpressionKind.Css)
+            return [.. root.QuerySelectorAll(expression.Text)];
+
+        return [.. root.SelectNodes(expression.Text) ?? Enumerable.Empty<HtmlNode>()];
     }
 
     private string Said(HtmlNode node, string? attribute, Uri address)

@@ -21,7 +21,8 @@ public sealed class PageWalking(IPageAgent agent, AddressRules rules)
         if (Refusal(address, moves, maxCharacters) is { } refusal)
             return Answer.Failed(refusal, Messages.MoveHint);
 
-        var outcome = await agent.PerformAsync(new Errand(address, [.. moves!.Select(Stepped)]), cancellationToken);
+        var errand = new Errand(address, [.. moves!.Select(Stepped)]);
+        var outcome = await agent.PerformAsync(errand, cancellationToken);
 
         return outcome.TryGetValue(out var page)
             ? Answer.Ok(Described(page, maxCharacters))
@@ -39,7 +40,18 @@ public sealed class PageWalking(IPageAgent agent, AddressRules rules)
         if (maxCharacters is < Limits.FewestCharacters or > Limits.MostCharacters)
             return Messages.CharactersOutOfRange(maxCharacters);
 
-        return moves.Select((move, index) => Fault(move) is { } fault ? Messages.MoveInvalid(index + 1, fault) : null).FirstOrDefault(fault => fault is not null);
+        return FirstFault(moves);
+    }
+
+    private static string? FirstFault(IReadOnlyList<Move> moves)
+    {
+        for (int position = 0; position < moves.Count; position++)
+        {
+            if (Fault(moves[position]) is { } fault)
+                return Messages.MoveInvalid(position + 1, fault);
+        }
+
+        return null;
     }
 
     /// <summary>What is wrong with a move as written, or null when it can be made.</summary>
@@ -67,11 +79,14 @@ public sealed class PageWalking(IPageAgent agent, AddressRules rules)
     {
         TryReadKind<StepKind>(move.Action, out var kind);
 
-        return new Step(kind, move.Label is { Length: > 0 } label ? Spot.Labelled(label) : Spot.Css(move.Css!))
+        var where = move.Label is { Length: > 0 } label ? Spot.Labelled(label) : Spot.Css(move.Css!);
+        var step = new Step(kind, where)
         {
             Value = move.Value,
             Expected = Expected(move)
         };
+
+        return step;
     }
 
     private static Effect? Expected(Move move) =>
@@ -79,16 +94,31 @@ public sealed class PageWalking(IPageAgent agent, AddressRules rules)
             ? new Effect(kind, move.Pattern!) { Within = TimeSpan.FromSeconds(move.WithinSeconds ?? Limits.DefaultWithinSeconds) }
             : null;
 
-    /// <summary>Reads a kind by its name alone: a number would parse as an enum and name nothing a caller meant.</summary>
+    /// <summary>Reads a kind by the one word that names it.</summary>
+    /// <remarks>
+    /// Not <see cref="Enum.TryParse{TEnum}(string, bool, out TEnum)"/>: it reads a number as a value and a
+    /// comma-separated list as the values ORed together, for any enum, so <c>pick,click</c> parsed as
+    /// <see cref="StepKind.Press"/> and passed the validation — found by the audit of 2026-10-16.
+    /// </remarks>
     private static bool TryReadKind<TKind>(string? name, out TKind kind)
         where TKind : struct, Enum
     {
         kind = default;
 
-        return !string.IsNullOrWhiteSpace(name)
-               && !int.TryParse(name, out _)
-               && Enum.TryParse(name.Trim(), ignoreCase: true, out kind)
-               && Enum.IsDefined(kind);
+        if (string.IsNullOrWhiteSpace(name))
+            return false;
+
+        foreach (var candidate in Enum.GetValues<TKind>())
+        {
+            if (!candidate.ToString().Equals(name.Trim(), StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            kind = candidate;
+
+            return true;
+        }
+
+        return false;
     }
 
     private static JsonObject Described(PageContent page, int maxCharacters)

@@ -101,6 +101,7 @@ Every variable begins with `SNAIL_MCP_PLAYWRIGHT_`. The server's own settings:
 | `ALLOW_PRIVATE_ADDRESSES` | `false` | Whether addresses inside the deployment's own network may be read. |
 | `PAGE_MEMORY_MINUTES` | `10` | How long a page that was read is remembered; `0` forgets at once. |
 | `PAGE_MEMORY_PAGES` | `16` | Pages remembered at once. |
+| `PAGE_MEMORY_MEGABYTES` | `64` | Megabytes the remembered pages may hold together; the oldest give way first. |
 | `BROWSER_PROBE_SECONDS` | `10` | How long `playwright_diagnose` waits for the browser. |
 
 The toolkit's settings travel under the same prefix: `WEB__SECTION__NAME` is the toolkit's
@@ -168,7 +169,9 @@ so without that step NuGet keeps serving the package it restored last time.
 What a model reads lives in `src/Tools/Prompts/`: `ToolDescriptions.cs` before a call, `Messages.cs` after
 one, `ServerGuidance.cs` once at the start. Guard tests hold those texts to the code — every limit a
 description states, every failure kind the toolkit can report, every move `playwright_perform` accepts —
-and the tool list has a budget, because it is read into every session whether or not a tool is used.
+and the tool list has a budget, because it is read into every session whether or not a tool is used. The
+budget is 6144 characters over the names and descriptions of the tools and their parameters, and the nine
+tools stand two characters under it: a word added to any description starts with a word taken out elsewhere.
 
 ## License
 

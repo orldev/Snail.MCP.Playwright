@@ -67,6 +67,9 @@ public static class ServerConfigExtensions
         if (config.PageMemoryPages is < 1 or > 256)
             faults.Add($"PageMemoryPages must be between 1 and 256, not {config.PageMemoryPages}");
 
+        if (config.PageMemoryMegabytes is < 1 or > 1024)
+            faults.Add($"PageMemoryMegabytes must be between 1 and 1024, not {config.PageMemoryMegabytes}");
+
         if (SearchEngines.Named(config.Engines) is { Count: 0 })
             faults.Add("Engines names no search engine, which leaves playwright_search with nobody to ask");
 

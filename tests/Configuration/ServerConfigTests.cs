@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Snail.MCP.Playwright.Configuration;
 using Snail.MCP.Playwright.Domain;
 using Snail.Sdk.Mcp.Hosting;
+using Snail.Sdk.Mcp.Testing;
 
 namespace Snail.MCP.Playwright.Tests.Configuration;
 
@@ -46,7 +47,7 @@ public sealed class ServerConfigTests
     [Fact]
     public void Settings_FromASettingsFile_ReachTheServerAndTheToolkit()
     {
-        var folder = Directory.CreateTempSubdirectory("snail-playwright-");
+        var folder = new DirectoryInfo(TestFolder.Create());
 
         try
         {
@@ -68,7 +69,7 @@ public sealed class ServerConfigTests
     [Fact]
     public void Settings_InTheFileAndInAVariable_HearTheVariable()
     {
-        var folder = Directory.CreateTempSubdirectory("snail-playwright-");
+        var folder = new DirectoryInfo(TestFolder.Create());
 
         try
         {

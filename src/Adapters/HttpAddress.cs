@@ -2,13 +2,12 @@ using Microsoft.AspNetCore.Http;
 
 namespace Snail.MCP.Playwright.Adapters;
 
-/// <summary>The address the session was opened at, read from the request being served.</summary>
+/// <summary>The address the call was posted to, read from the request being served.</summary>
 /// <remarks>
-/// Every request of one session is posted to the same URL, so the query is on all of them and reading
-/// the current one answers about the session — with a session or without one, which matters because a
-/// client of the sessionless protocol revision is served request by request.
+/// The server answers each request on its own, and the platform's worker posts every call to the same
+/// URL, so the query of the current request is the whole of what the caller said about it.
 /// </remarks>
-public sealed class HttpAddress(IHttpContextAccessor requests) : ISessionAddress
+public sealed class HttpAddress(IHttpContextAccessor requests) : IRequestAddress
 {
     /// <inheritdoc/>
     public IReadOnlyList<string> Values(string parameter) =>
