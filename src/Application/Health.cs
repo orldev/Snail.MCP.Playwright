@@ -14,11 +14,14 @@ namespace Snail.MCP.Playwright.Application;
 /// </remarks>
 public sealed class Health(
     IBrowserPool browsers,
+    IBrowserServer door,
     IEnumerable<ISearchProvider> engines,
     IOptions<ScrapingOptions> scraping,
     ServerConfig config,
     TimeProvider clock)
 {
+    private TimeSpan Patience => TimeSpan.FromSeconds(config.BrowserProbeSeconds);
+
     /// <summary>The state of the server, of the browser behind it and of the search it offers.</summary>
     public async Task<Answer> ReportAsync(CancellationToken cancellationToken = default) =>
         Answer.Ok(new JsonObject
@@ -36,16 +39,26 @@ public sealed class Health(
             }
         });
 
-    /// <summary>Whether the browser answers, without the rest of the report.</summary>
-    public async Task<bool> IsBrowserReachableAsync(CancellationToken cancellationToken = default) =>
-        (await BrowserAsync(cancellationToken))["isReachable"]!.GetValue<bool>();
+    /// <summary>Whether the browser answers, asked the cheap way: a knock at the browser server's address, no browser rented.</summary>
+    /// <remarks>
+    /// The health check is what an orchestrator restarts a container by, and a rent waits for a permit the
+    /// page loads in flight hold: asked through the pool, a busy server was reported dead. The knock takes no
+    /// permit. A server that launches its own browser has no address to knock at and is still asked by renting.
+    /// </remarks>
+    public async Task<bool> IsBrowserReachableAsync(CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(scraping.Value.BrowserServer))
+            return (await BrowserAsync(cancellationToken))["isReachable"]!.GetValue<bool>();
+
+        return await door.IsAnsweringAsync(Patience, cancellationToken);
+    }
 
     private async Task<JsonObject> BrowserAsync(CancellationToken cancellationToken)
     {
         long asked = clock.GetTimestamp();
 
         using var patience = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        patience.CancelAfter(TimeSpan.FromSeconds(config.BrowserProbeSeconds));
+        patience.CancelAfter(Patience);
 
         try
         {

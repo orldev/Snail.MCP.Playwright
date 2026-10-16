@@ -24,6 +24,7 @@ public static class BrowsingRegistrationExtensions
         {
             services.AddSearchEngines(SearchEngines.Named(config.Engines), settings);
             services.AddPageReading(settings);
+            services.TryAddSingleton<IBrowserServer, HttpBrowserServer>();
             services.TryAddSingleton<Health>();
 
             return services;

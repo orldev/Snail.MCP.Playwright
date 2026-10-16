@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Microsoft.Extensions.Options;
 using Snail.MCP.Playwright.Application;
+using Snail.MCP.Playwright.Application.Ports;
 using Snail.MCP.Playwright.Configuration;
 using Snail.Toolkit.Web.Scraping;
 using Snail.Toolkit.Web.Scraping.Browsers;
@@ -37,8 +38,42 @@ public sealed class HealthTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => health.ReportAsync(cancelled.Token));
     }
 
-    private static Health Health(IBrowserPool pool) =>
-        new(pool, [], Options.Create(new ScrapingOptions()), new ServerConfig(), TimeProvider.System);
+    /// <summary>A rent waits for a permit the page loads in flight hold; the health check must not.</summary>
+    [Fact]
+    public async Task IsBrowserReachable_WithABrowserServerConfigured_KnocksInsteadOfRenting()
+    {
+        var pool = new BrokenPool(new InvalidOperationException("a rent was asked for"));
+        var health = Health(pool, new Door(isAnswering: true), "ws://browser:3000/");
+
+        Assert.True(await health.IsBrowserReachableAsync());
+    }
+
+    [Fact]
+    public async Task IsBrowserReachable_WhenNobodyAnswersTheKnock_IsFalse()
+    {
+        var health = Health(new BrokenPool(new InvalidOperationException("a rent was asked for")), new Door(isAnswering: false), "ws://browser:3000/");
+
+        Assert.False(await health.IsBrowserReachableAsync());
+    }
+
+    /// <summary>A server that launches its own browser has no address to knock at, and is asked the only way there is.</summary>
+    [Fact]
+    public async Task IsBrowserReachable_WithNoBrowserServerConfigured_Rents()
+    {
+        var health = Health(new BrokenPool(new Win32Exception(13, "Permission denied")), new Door(isAnswering: true), browserServer: null);
+
+        Assert.False(await health.IsBrowserReachableAsync());
+    }
+
+    private static Health Health(IBrowserPool pool) => Health(pool, new Door(isAnswering: false), browserServer: null);
+
+    private static Health Health(IBrowserPool pool, IBrowserServer door, string? browserServer) =>
+        new(pool, door, [], Options.Create(new ScrapingOptions { BrowserServer = browserServer }), new ServerConfig(), TimeProvider.System);
+
+    private sealed class Door(bool isAnswering) : IBrowserServer
+    {
+        public Task<bool> IsAnsweringAsync(TimeSpan patience, CancellationToken ct = default) => Task.FromResult(isAnswering);
+    }
 
     private sealed class BrokenPool(Exception failure) : IBrowserPool
     {

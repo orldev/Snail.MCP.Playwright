@@ -56,6 +56,10 @@ nowhere.
 There is no token on `/mcp`: the address the server is published at is the whole of its access control,
 which is why the compose file publishes it on the loopback.
 
+`/healthz` asks whether the pair is alive, and asks it cheaply: a plain request at the browser server's
+address, no browser rented, so a server busy with four pages still answers `200` at once. `playwright_diagnose`
+asks the fuller question — it rents a browser and reports its version — and waits for a free one to do so.
+
 ### As a program, for one client
 
 ```jsonc
