@@ -10,7 +10,13 @@
 # The SDK is pinned to the band global.json asks for: on the floating sdk:10.0 a newer feature band would one day
 # refuse the build. The server is framework-dependent, as Playwright's driver and reflection keep it out of Native AOT:
 # -p:PublishAot=false, onto the ASP.NET runtime.
+#
+# VERSION is the release's when the shared mcp-image.yml builds the image (0.0.0-<branch>.<commit> from a branch)
+# and 0.0.0-local otherwise: the server reports it in initialize and the image carries it as its OCI version.
+ARG VERSION=0.0.0-local
+
 FROM mcr.microsoft.com/dotnet/sdk:10.0.302 AS build
+ARG VERSION
 ARG TARGETARCH
 WORKDIR /source
 
@@ -18,9 +24,17 @@ COPY . .
 
 # The architecture is named so that Playwright ships the one node driver this image can run, rather
 # than the drivers of every platform it supports: about a hundred megabytes of the difference.
-RUN dotnet publish src/Snail.MCP.Playwright.csproj -c Release -o /app -a "$TARGETARCH" --self-contained false -p:UseAppHost=false -p:PublishAot=false
+RUN dotnet publish src/Snail.MCP.Playwright.csproj -c Release -o /app -a "$TARGETARCH" --self-contained false -p:UseAppHost=false -p:PublishAot=false -p:Version=$VERSION
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
+ARG VERSION
+LABEL org.opencontainers.image.version=$VERSION
+# tini runs as process 1 and starts the program under it: .NET ends an unhandled exception with SIGABRT, which process
+# 1 of a container ignores, so run as process 1 itself a program that fails at start spins at a full core and never
+# exits, and nothing restarts it. Under tini it exits with 134.
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends tini \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /app .
 
@@ -50,4 +64,4 @@ LABEL mcp.name="playwright" \
       mcp.requires="A Playwright browser server beside it: the ghcr.io/orldev/ff-juggler:153.0-pw1.62-amd64 container, reachable at the address in SNAIL_MCP_PLAYWRIGHT_WEB__SCRAPING__BROWSER_SERVER." \
       mcp.env.SNAIL_MCP_PLAYWRIGHT_WEB__SCRAPING__BROWSER_SERVER="ws://browser:3000/"
 
-ENTRYPOINT ["dotnet", "Snail.MCP.Playwright.dll"]
+ENTRYPOINT ["/usr/bin/tini", "--", "dotnet", "Snail.MCP.Playwright.dll"]
