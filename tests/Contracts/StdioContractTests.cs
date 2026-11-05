@@ -19,6 +19,7 @@ public sealed class StdioContractTests
 
         var listed = await client.ListToolsAsync();
 
+        Assert.NotNull(client.ServerInfo);
         Assert.Equal("s3l-mcp-playwright", client.ServerInfo.Name);
         Assert.Equal(ServerGuidance.Instructions, client.ServerInstructions);
         Assert.Equal(Catalog.Names, [.. listed.Select(tool => tool.Name).Order(StringComparer.Ordinal)]);

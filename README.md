@@ -159,16 +159,7 @@ dotnet test                                                    # no browser need
 SNAIL_LIVE_BROWSER_SERVER=ws://localhost:3000/ dotnet test     # adds the live checks
 ```
 
-Snail.Toolkit.Web is not published yet, so its packages are bundled in `packages/`. After changing the
-toolkit, rebuild them:
-
-```bash
-tools/pack-toolkit.sh            # the toolkit checked out beside this repository
-tools/pack-toolkit.sh /path/to/Snail.Toolkit.Web
-```
-
-The script removes the cached copies as well. The version does not move while the toolkit is unpublished,
-so without that step NuGet keeps serving the package it restored last time.
+Snail.Toolkit.Web comes from NuGet, as every other package does.
 
 What a model reads lives in `src/Tools/Prompts/`: `ToolDescriptions.cs` before a call, `Messages.cs` after
 one, `ServerGuidance.cs` once at the start. Guard tests hold those texts to the code — every limit a

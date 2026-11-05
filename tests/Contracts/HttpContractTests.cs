@@ -17,6 +17,7 @@ public sealed class HttpContractTests
         await using var server = await ListeningServer.StartAsync();
         await using var client = await server.ConnectAsync();
 
+        Assert.NotNull(client.ServerInfo);
         Assert.Equal(ThisAssembly.Name, client.ServerInfo.Name);
         Assert.Equal(ThisAssembly.Version, client.ServerInfo.Version);
         Assert.Equal(ServerGuidance.Instructions, client.ServerInstructions);
