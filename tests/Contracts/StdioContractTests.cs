@@ -49,6 +49,24 @@ public sealed class StdioContractTests
         Assert.Empty(ToolGuards.Problems(listed.Select(tool => tool.ProtocolTool)));
     }
 
+    /// <summary>The settings are bound before any host exists: a word where a number of seconds belongs crashed the program with a trace and
+    /// exit code 134, and is refused in one line that names the variable, with exit code 1.</summary>
+    [Fact]
+    public async Task Program_WithAWordForANumber_IsRefusedInOneLine_NamingTheVariable()
+    {
+        var environment = Deployment.Variables(("SEARCH_SECONDS", "abc"))
+            .ToDictionary(variable => variable.Key, variable => (string?)variable.Value);
+
+        var refused = await Assert.ThrowsAsync<ServerExitedException>(() => ServerProgram.StartAsync("Snail.MCP.Playwright", "SNAIL_PLAYWRIGHT_SERVER", environment));
+
+        var line = Assert.Single(refused.Stderr.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+
+        Assert.Equal(1, refused.ExitCode);
+        Assert.Contains("SNAIL_MCP_PLAYWRIGHT_SEARCH_SECONDS", line, StringComparison.Ordinal);
+        Assert.Contains("'abc'", line, StringComparison.Ordinal);
+        Assert.DoesNotContain("   at ", refused.Stderr, StringComparison.Ordinal);
+    }
+
     private static Task<McpClient> StartedAsync() =>
         ServerProgram.StartAsync(
             "Snail.MCP.Playwright",

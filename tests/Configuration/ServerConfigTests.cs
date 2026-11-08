@@ -102,9 +102,9 @@ public sealed class ServerConfigTests
         Assert.Equal([SearchEngines.Google, SearchEngines.DuckDuckGo], SearchEngines.Named(" google, DUCKDUCKGO ,google"));
 
     [Theory]
-    [InlineData("BROWSER_PROBE_SECONDS", "0", "BrowserProbeSeconds")]
+    [InlineData("BROWSER_PROBE_SECONDS", "0", "SNAIL_MCP_PLAYWRIGHT_BROWSER_PROBE_SECONDS")]
     [InlineData("ENGINES", "Yandex", "Yandex")]
-    [InlineData("ENGINES", " , ", "Engines")]
+    [InlineData("ENGINES", " , ", "SNAIL_MCP_PLAYWRIGHT_ENGINES")]
     public void Config_WithASettingOutOfRange_StopsTheStartAndNamesIt(string variable, string value, string named)
     {
         var refused = Assert.Throws<StartRefusedException>(() => ServerConfigExtensions.Read(Deployment.Settings((variable, value))));

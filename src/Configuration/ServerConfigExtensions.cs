@@ -34,13 +34,21 @@ public static class ServerConfigExtensions
     /// <remarks>
     /// Where it answers is not among them: <c>McpEndpoint</c> of Snail.Sdk reads <c>PORT</c>, <c>TRANSPORT</c> and
     /// <c>URL</c> from the same settings and decides which host is built at all.
+    /// <para>
+    /// No host is there yet to refuse a value of the wrong type, so <see cref="ServerSettings.Bind(string, IConfiguration, Action{IConfiguration})"/>
+    /// says it as a <see cref="StartRefusedException"/> naming the variable, where the binder crashed the process with a trace.
+    /// </para>
     /// </remarks>
+    /// <exception cref="StartRefusedException">A setting holds a value its property's type cannot hold, or one outside its range.</exception>
     public static ServerConfig Read(IConfiguration settings)
     {
         var config = new ServerConfig();
 
-        settings.GetSection(ServerConfig.SectionName).Bind(config);
-        settings.Bind(config);
+        ServerSettings.Bind(Name, settings, bound =>
+        {
+            bound.GetSection(ServerConfig.SectionName).Bind(config);
+            bound.Bind(config);
+        });
 
         Validate(config);
 
@@ -53,25 +61,25 @@ public static class ServerConfigExtensions
         var faults = new List<string>();
 
         if (config.BrowserProbeSeconds is < 1 or > 120)
-            faults.Add($"BrowserProbeSeconds must be between 1 and 120, not {config.BrowserProbeSeconds}");
+            faults.Add($"{ServerSettings.NameOfSetting(Name, "BrowserProbeSeconds")} must be between 1 and 120, not {config.BrowserProbeSeconds}");
 
         if (config.SearchSeconds is < 5 or > 300)
-            faults.Add($"SearchSeconds must be between 5 and 300, not {config.SearchSeconds}");
+            faults.Add($"{ServerSettings.NameOfSetting(Name, "SearchSeconds")} must be between 5 and 300, not {config.SearchSeconds}");
 
         if (config.PageMemoryMinutes is < 0 or > 120)
-            faults.Add($"PageMemoryMinutes must be between 0 and 120, not {config.PageMemoryMinutes}");
+            faults.Add($"{ServerSettings.NameOfSetting(Name, "PageMemoryMinutes")} must be between 0 and 120, not {config.PageMemoryMinutes}");
 
         if (config.PageMemoryPages is < 1 or > 256)
-            faults.Add($"PageMemoryPages must be between 1 and 256, not {config.PageMemoryPages}");
+            faults.Add($"{ServerSettings.NameOfSetting(Name, "PageMemoryPages")} must be between 1 and 256, not {config.PageMemoryPages}");
 
         if (config.PageMemoryMegabytes is < 1 or > 1024)
-            faults.Add($"PageMemoryMegabytes must be between 1 and 1024, not {config.PageMemoryMegabytes}");
+            faults.Add($"{ServerSettings.NameOfSetting(Name, "PageMemoryMegabytes")} must be between 1 and 1024, not {config.PageMemoryMegabytes}");
 
         if (SearchEngines.Named(config.Engines) is { Count: 0 })
-            faults.Add("Engines names no search engine, which leaves playwright_search with nobody to ask");
+            faults.Add($"{ServerSettings.NameOfSetting(Name, "Engines")} names no search engine, which leaves playwright_search with nobody to ask");
 
         if (SearchEngines.Named(config.Engines).Except(SearchEngines.All, StringComparer.Ordinal).ToList() is { Count: > 0 } unknown)
-            faults.Add($"Engines names {string.Join(", ", unknown)}, and the engines there are: {string.Join(", ", SearchEngines.All)}");
+            faults.Add($"{ServerSettings.NameOfSetting(Name, "Engines")} names {string.Join(", ", unknown)}, and the engines there are: {string.Join(", ", SearchEngines.All)}");
 
         if (faults.Count > 0)
             throw new StartRefusedException($"invalid configuration: {string.Join("; ", faults)}");
