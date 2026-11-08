@@ -59,8 +59,12 @@ public sealed partial class DeploymentContractTests
         Assert.All(variables, variable => Assert.True(IsRead(variable), variable));
     }
 
+    /// <summary>The keys Snail.Sdk's <c>McpEndpoint</c> reads where the server answers, beside the server's own settings.</summary>
+    private static readonly string[] EndpointKeys = ["Port", "Transport", "Url", "Http:Url", "ListensOnEveryInterface"];
+
     private static bool IsRead(string variable) =>
         variable.StartsWith("WEB__", StringComparison.Ordinal)
+        || EndpointKeys.Contains(EnvironmentSettings.ToConfigurationKey(variable), StringComparer.OrdinalIgnoreCase)
         || typeof(ServerConfig).GetProperties().Any(setting =>
             setting.Name.Equals(EnvironmentSettings.ToConfigurationKey(variable), StringComparison.OrdinalIgnoreCase));
 

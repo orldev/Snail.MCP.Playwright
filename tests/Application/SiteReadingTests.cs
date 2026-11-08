@@ -1,6 +1,5 @@
 using Snail.MCP.Playwright.Application;
 using Snail.MCP.Playwright.Configuration;
-using Snail.MCP.Playwright.Domain;
 using Snail.Toolkit.Web.Scraping;
 
 namespace Snail.MCP.Playwright.Tests.Application;
@@ -11,7 +10,7 @@ public sealed class SiteReadingTests
 
     private static SiteReading Site(FakeCrawler crawler) => new(crawler, new AddressRules(new ServerConfig()));
 
-    private static Task<Answer> ReadAsync(FakeCrawler crawler, string url = Start, int maxPages = 10, int maxDepth = 2, int seconds = 120, int each = 2000) =>
+    private static Task<Answer<JsonNode>> ReadAsync(FakeCrawler crawler, string url = Start, int maxPages = 10, int maxDepth = 2, int seconds = 120, int each = 2000) =>
         Site(crawler).ReadAsync(url, maxPages, maxDepth, seconds, each);
 
     /// <summary>The toolkit's own ceilings are five hundred pages and forty minutes; one tool call must never inherit them.</summary>
@@ -42,10 +41,10 @@ public sealed class SiteReadingTests
         var answer = await ReadAsync(crawler, each: 500);
 
         Assert.True(answer.IsSuccess);
-        Assert.Equal(1, answer.Data!["read"]!.GetValue<int>());
-        Assert.Equal(500, answer.Data["pages"]![0]!["text"]!.GetValue<string>().Length);
-        Assert.Equal(3000, answer.Data["pages"]![0]!["characters"]!["total"]!.GetValue<int>());
-        Assert.Equal(404, answer.Data["failed"]![0]!["status"]!.GetValue<int>());
+        Assert.Equal(1, answer.Value!["read"]!.GetValue<int>());
+        Assert.Equal(500, answer.Value["pages"]![0]!["text"]!.GetValue<string>().Length);
+        Assert.Equal(3000, answer.Value["pages"]![0]!["characters"]!["total"]!.GetValue<int>());
+        Assert.Equal(404, answer.Value["failed"]![0]!["status"]!.GetValue<int>());
     }
 
     /// <summary>A walk that stopped early and one that read the whole site look identical from the pages alone.</summary>
@@ -64,8 +63,8 @@ public sealed class SiteReadingTests
         var answer = await ReadAsync(crawler);
 
         Assert.True(answer.IsSuccess);
-        Assert.Equal(stop.ToString(), answer.Data!["stop"]!.GetValue<string>());
-        Assert.Contains(means, answer.Data["stopMeans"]!.GetValue<string>(), StringComparison.Ordinal);
+        Assert.Equal(stop.ToString(), answer.Value!["stop"]!.GetValue<string>());
+        Assert.Contains(means, answer.Value["stopMeans"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
     [Fact]

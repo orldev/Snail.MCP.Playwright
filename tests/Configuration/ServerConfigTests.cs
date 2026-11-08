@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Configuration;
 using Snail.MCP.Playwright.Configuration;
 using Snail.MCP.Playwright.Domain;
+using Snail.MCP.Playwright.Extensions;
 using Snail.Sdk.Mcp.Hosting;
-using Snail.Sdk.Mcp.Testing;
 
 namespace Snail.MCP.Playwright.Tests.Configuration;
 
@@ -21,7 +21,7 @@ public sealed class ServerConfigTests
     {
         var settings = ServerConfigExtensions.Settings(null, new Dictionary<string, string> { ["PORT"] = "1", ["SNAIL_MCP_GIT_PORT"] = "2" });
 
-        Assert.Equal(0, ServerConfigExtensions.Read(settings).Port);
+        Assert.Equal(McpTransport.Stdio, McpServerHost.EndpointOf(settings).Transport);
     }
 
     [Fact]
@@ -90,9 +90,10 @@ public sealed class ServerConfigTests
     [Fact]
     public void Config_WithNothingConfigured_SpeaksStdioAndAsksTheDefaultEngines()
     {
-        var config = ServerConfigExtensions.Read(ServerConfigExtensions.Settings(null, new Dictionary<string, string>()));
+        var settings = ServerConfigExtensions.Settings(null, new Dictionary<string, string>());
+        var config = ServerConfigExtensions.Read(settings);
 
-        Assert.Equal(0, config.Port);
+        Assert.Equal(McpTransport.Stdio, McpServerHost.EndpointOf(settings).Transport);
         Assert.Equal([SearchEngines.DuckDuckGo, SearchEngines.Bing, SearchEngines.Brave], SearchEngines.Named(config.Engines));
     }
 
@@ -101,14 +102,53 @@ public sealed class ServerConfigTests
         Assert.Equal([SearchEngines.Google, SearchEngines.DuckDuckGo], SearchEngines.Named(" google, DUCKDUCKGO ,google"));
 
     [Theory]
-    [InlineData("PORT", "70000", "Port")]
     [InlineData("BROWSER_PROBE_SECONDS", "0", "BrowserProbeSeconds")]
     [InlineData("ENGINES", "Yandex", "Yandex")]
     [InlineData("ENGINES", " , ", "Engines")]
     public void Config_WithASettingOutOfRange_StopsTheStartAndNamesIt(string variable, string value, string named)
     {
-        var refused = Assert.Throws<InvalidOperationException>(() => ServerConfigExtensions.Read(Deployment.Settings((variable, value))));
+        var refused = Assert.Throws<StartRefusedException>(() => ServerConfigExtensions.Read(Deployment.Settings((variable, value))));
 
         Assert.Contains(named, refused.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>A port alone means HTTP on it, on loopback outside a container: the image's port, the developer's run.</summary>
+    [Fact]
+    public void Endpoint_WithAPort_IsHttpOnThatPortOfLoopback()
+    {
+        var endpoint = McpServerHost.EndpointOf(Deployment.Settings(("PORT", "8822")));
+
+        Assert.Equal(McpTransport.Http, endpoint.Transport);
+        Assert.Equal(8822, endpoint.Url.Port);
+        Assert.True(endpoint.Url.IsLoopback);
+    }
+
+    /// <summary>The operators of this server wrote its settings under <c>Snail</c>, the endpoint's among them.</summary>
+    [Fact]
+    public void Endpoint_WithAPortUnderTheSnailSection_IsHttpOnThatPort()
+    {
+        var endpoint = McpServerHost.EndpointOf(Deployment.Settings(("SNAIL__PORT", "8823")));
+
+        Assert.Equal(McpTransport.Http, endpoint.Transport);
+        Assert.Equal(8823, endpoint.Url.Port);
+    }
+
+    /// <summary>The server has no token: outside its image the network is not opened by one setting.</summary>
+    /// <remarks>The endpoint is read under the server's name, so the refusal names the variable in the test's process too, where the entry assembly is the test runner.</remarks>
+    [OutsideAContainerFact]
+    public void Endpoint_OnEveryInterfaceOutsideAContainer_StopsTheStartAndNamesTheVariable()
+    {
+        var refused = Assert.Throws<StartRefusedException>(() =>
+            McpServerHost.EndpointOf(Deployment.Settings(("PORT", "8822"), ("LISTENS_ON_EVERY_INTERFACE", "true"))));
+
+        Assert.Contains("SNAIL_MCP_PLAYWRIGHT_LISTENS_ON_EVERY_INTERFACE", refused.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Endpoint_WithAPortOutOfRange_StopsTheStartAndNamesIt()
+    {
+        var refused = Assert.Throws<StartRefusedException>(() => McpServerHost.EndpointOf(Deployment.Settings(("PORT", "70000"))));
+
+        Assert.Contains("SNAIL_MCP_PLAYWRIGHT_PORT", refused.Message, StringComparison.Ordinal);
     }
 }

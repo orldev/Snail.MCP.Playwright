@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using Snail.MCP.Playwright.Configuration;
 using Snail.MCP.Playwright.Tools.Prompts;
+using Snail.Sdk.Mcp.Hosting;
 using Snail.Toolkit.Web.Scraping;
 using Snail.Toolkit.Web.Scraping.Browsers;
 using Snail.Toolkit.Web.Search;
@@ -18,19 +19,20 @@ public sealed class Health(
     IEnumerable<ISearchProvider> engines,
     IOptions<ScrapingOptions> scraping,
     ServerConfig config,
+    McpEndpoint endpoint,
     TimeProvider clock)
 {
     private TimeSpan Patience => TimeSpan.FromSeconds(config.BrowserProbeSeconds);
 
     /// <summary>The state of the server, of the browser behind it and of the search it offers.</summary>
-    public async Task<Answer> ReportAsync(CancellationToken cancellationToken = default) =>
-        Answer.Ok(new JsonObject
+    public async Task<Answer<JsonNode>> ReportAsync(CancellationToken cancellationToken = default) =>
+        Answer.Ok<JsonNode>(new JsonObject
         {
             ["server"] = new JsonObject
             {
-                ["name"] = ThisAssembly.Name,
-                ["version"] = ThisAssembly.Version,
-                ["transport"] = config.Port > 0 ? "http" : "stdio"
+                ["name"] = ServerIdentity.NameOf(typeof(Health).Assembly),
+                ["version"] = ServerIdentity.VersionOf(typeof(Health).Assembly),
+                ["transport"] = ToolAnswer.Word(endpoint.Transport)
             },
             ["browser"] = await BrowserAsync(cancellationToken),
             ["search"] = new JsonObject

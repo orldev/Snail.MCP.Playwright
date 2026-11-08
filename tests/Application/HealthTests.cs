@@ -3,6 +3,8 @@ using Microsoft.Extensions.Options;
 using Snail.MCP.Playwright.Application;
 using Snail.MCP.Playwright.Application.Ports;
 using Snail.MCP.Playwright.Configuration;
+using Snail.MCP.Playwright.Extensions;
+using Snail.Sdk.Mcp.Hosting;
 using Snail.Toolkit.Web.Scraping;
 using Snail.Toolkit.Web.Scraping.Browsers;
 
@@ -22,8 +24,8 @@ public sealed class HealthTests
         var answer = await health.ReportAsync();
 
         Assert.True(answer.IsSuccess);
-        Assert.False(answer.Data!["browser"]!["isReachable"]!.GetValue<bool>());
-        Assert.Contains("Permission denied", answer.Data["browser"]!["error"]!.GetValue<string>(), StringComparison.Ordinal);
+        Assert.False(answer.Value!["browser"]!["isReachable"]!.GetValue<bool>());
+        Assert.Contains("Permission denied", answer.Value["browser"]!["error"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
     /// <summary>The caller changing its mind is not a state of the browser, and must not be reported as one.</summary>
@@ -65,10 +67,12 @@ public sealed class HealthTests
         Assert.False(await health.IsBrowserReachableAsync());
     }
 
+    private static readonly McpEndpoint Stdio = new(McpTransport.Stdio, McpServerHost.DefaultUrl, ListensOnEveryInterface: false);
+
     private static Health Health(IBrowserPool pool) => Health(pool, new Door(isAnswering: false), browserServer: null);
 
     private static Health Health(IBrowserPool pool, IBrowserServer door, string? browserServer) =>
-        new(pool, door, [], Options.Create(new ScrapingOptions { BrowserServer = browserServer }), new ServerConfig(), TimeProvider.System);
+        new(pool, door, [], Options.Create(new ScrapingOptions { BrowserServer = browserServer }), new ServerConfig(), Stdio, TimeProvider.System);
 
     private sealed class Door(bool isAnswering) : IBrowserServer
     {

@@ -23,7 +23,7 @@ public sealed class HealthChaosTests
         var answer = await client.CallToolAsync("playwright_diagnose", new Dictionary<string, object?>()).AsTask().WaitAsync(TimeSpan.FromSeconds(60));
         double seconds = Stopwatch.GetElapsedTime(asked).TotalSeconds;
 
-        Assert.False(answer.Data()["browser"]!["isReachable"]!.GetValue<bool>());
+        Assert.False(answer.Data()!["browser"]!["isReachable"]!.GetValue<bool>());
         Assert.InRange(seconds, 0, 15);
     }
 

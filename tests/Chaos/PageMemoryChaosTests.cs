@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Time.Testing;
 using Snail.MCP.Playwright.Application;
 using Snail.MCP.Playwright.Configuration;
 using Snail.Toolkit.Web;
@@ -50,7 +51,7 @@ public sealed class PageMemoryChaosTests
     [Fact]
     public void Keep_PagesPastTheByteCeiling_ForgetsTheOldestFirst()
     {
-        var memory = new PageMemory(new ServerConfig { PageMemoryPages = 256, PageMemoryMegabytes = 20 }, new FakeClock(Noon.AddMinutes(1)));
+        var memory = new PageMemory(new ServerConfig { PageMemoryPages = 256, PageMemoryMegabytes = 20 }, new FakeTimeProvider(Noon.AddMinutes(1)));
 
         for (int index = 0; index < 8; index++)
             memory.Keep(Page($"https://example.org/heavy/{index}", 2_000_000, secondsAfterNoon: index));
@@ -65,17 +66,12 @@ public sealed class PageMemoryChaosTests
     [Fact]
     public void Keep_APageLargerThanTheCeiling_KeepsItAlone()
     {
-        var memory = new PageMemory(new ServerConfig { PageMemoryMegabytes = 1 }, new FakeClock(Noon.AddMinutes(1)));
+        var memory = new PageMemory(new ServerConfig { PageMemoryMegabytes = 1 }, new FakeTimeProvider(Noon.AddMinutes(1)));
 
         memory.Keep(Page("https://example.org/small", secondsAfterNoon: 0));
         memory.Keep(Page("https://example.org/huge", 1_000_000, secondsAfterNoon: 1));
 
         Assert.NotNull(memory.Of(Link.Of("https://example.org/huge")));
         Assert.Null(memory.Of(Link.Of("https://example.org/small")));
-    }
-
-    private sealed class FakeClock(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
     }
 }

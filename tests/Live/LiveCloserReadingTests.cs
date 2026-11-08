@@ -17,7 +17,7 @@ public sealed class LiveCloserReadingTests
             new Dictionary<string, object?> { ["url"] = "https://www.iana.org/help/example-domains", ["xpath"] = "//h1" });
 
         Assert.NotEqual(true, answer.IsError);
-        Assert.Equal("Example Domains", answer.Data()["pieces"]![0]!.GetValue<string>());
+        Assert.Equal("Example Domains", answer.Data()!["pieces"]![0]!.GetValue<string>());
     }
 
     [LiveFact]
@@ -33,7 +33,7 @@ public sealed class LiveCloserReadingTests
         Assert.NotEqual(true, answer.IsError);
         Assert.Equal("image/jpeg", image.MimeType);
         Assert.Equal([0xFF, 0xD8, 0xFF], image.DecodedData[..3].ToArray());
-        Assert.Equal("Example Domain", answer.Data()["title"]!.GetValue<string>());
+        Assert.Equal("Example Domain", answer.Data()!["title"]!.GetValue<string>());
     }
 
     /// <summary>The defect this server found in the toolkit on its first day: every article was called a wall.</summary>
@@ -48,6 +48,6 @@ public sealed class LiveCloserReadingTests
             new Dictionary<string, object?> { ["url"] = "https://en.wikipedia.org/wiki/PostgreSQL", ["maxCharacters"] = 2000 });
 
         Assert.NotEqual(true, answer.IsError);
-        Assert.Contains("PostgreSQL", answer.Data()["title"]!.GetValue<string>(), StringComparison.Ordinal);
+        Assert.Contains("PostgreSQL", answer.Data()!["title"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 }

@@ -1,6 +1,5 @@
 using ModelContextProtocol.Client;
 using Snail.MCP.Playwright.Tools.Prompts;
-using Snail.Sdk.Mcp.Testing;
 
 namespace Snail.MCP.Playwright.Tests.Contracts;
 
@@ -33,7 +32,7 @@ public sealed class StdioContractTests
         var answer = await client.CallToolAsync("playwright_diagnose", new Dictionary<string, object?>());
 
         Assert.NotEqual(true, answer.IsError);
-        Assert.Equal("stdio", answer.Data()["server"]!["transport"]!.GetValue<string>());
+        Assert.Equal("stdio", answer.Data()!["server"]!["transport"]!.GetValue<string>());
     }
 
     /// <summary>

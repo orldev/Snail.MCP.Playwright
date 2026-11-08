@@ -1,5 +1,4 @@
 using Snail.MCP.Playwright.Application;
-using Snail.MCP.Playwright.Tools;
 using Snail.Toolkit.Web;
 using Snail.Toolkit.Web.Scraping;
 
@@ -17,11 +16,11 @@ public sealed class PieceChaosTests
     {
         var page = new PageContent(Link.Of("https://example.org/"), "<html></html>", "a😀bbbb", DateTimeOffset.UtcNow);
 
-        var result = ToolResponse.From(Piece.Of(page, 2, 500));
-        string text = result.Data()["text"]!.GetValue<string>();
+        var answer = Piece.Of(page, 2, 500);
+        string text = answer.Value!["text"]!.GetValue<string>();
 
         Assert.DoesNotContain('�', text);
         Assert.StartsWith("😀", text, StringComparison.Ordinal);
-        Assert.Equal(1, result.Data()["characters"]!["from"]!.GetValue<int>());
+        Assert.Equal(1, answer.Value["characters"]!["from"]!.GetValue<int>());
     }
 }

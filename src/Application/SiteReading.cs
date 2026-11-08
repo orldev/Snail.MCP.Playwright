@@ -13,7 +13,7 @@ namespace Snail.MCP.Playwright.Application;
 public sealed class SiteReading(ICrawler crawler, AddressRules rules)
 {
     /// <summary>What the site says, as far as the ceilings allowed, and why the walk ended.</summary>
-    public async Task<Answer> ReadAsync(
+    public async Task<Answer<JsonNode>> ReadAsync(
         string url,
         int maxPages,
         int maxDepth,
@@ -30,8 +30,8 @@ public sealed class SiteReading(ICrawler crawler, AddressRules rules)
         var report = await crawler.CrawlAsync(scope, cancellationToken);
 
         return report.Stop is CrawlStop.Refused
-            ? Answer.Stopped(Described(report, maxCharactersEach), Messages.CrawlStops[CrawlStop.Refused], WhyRefused(report))
-            : Answer.Ok(Described(report, maxCharactersEach));
+            ? Answer.Failed(Messages.CrawlStops[CrawlStop.Refused], WhyRefused(report), details: Described(report, maxCharactersEach))
+            : Answer.Ok<JsonNode>(Described(report, maxCharactersEach));
     }
 
     private string? Refusal(Link start, int maxPages, int maxDepth, int seconds, int maxCharactersEach)

@@ -11,8 +11,8 @@ namespace Snail.MCP.Playwright.Application;
 /// </remarks>
 public sealed class PagePictures(IPageSnapshots snapshots, AddressRules rules)
 {
-    /// <summary>A picture of the screen a visitor sees, or of the whole page.</summary>
-    public async Task<Answer> TakeAsync(string url, bool wholePage, CancellationToken cancellationToken = default)
+    /// <summary>A picture of the screen a visitor sees, or of the whole page, or why there is none with what the visit learned.</summary>
+    public async Task<Answer<PageSnapshot>> TakeAsync(string url, bool wholePage, CancellationToken cancellationToken = default)
     {
         var address = Link.Of(url ?? string.Empty);
 
@@ -22,11 +22,12 @@ public sealed class PagePictures(IPageSnapshots snapshots, AddressRules rules)
         var outcome = await snapshots.TakeAsync(address, wholePage ? SnapshotFrame.WholePage : SnapshotFrame.Screen, cancellationToken);
 
         return outcome.TryGetValue(out var snapshot)
-            ? Answer.Ok(Described(snapshot, wholePage)) with { Picture = new Picture(snapshot.Image, PageSnapshot.MediaType) }
-            : PageReading.Refused(outcome.Failure!);
+            ? Answer.Ok(snapshot)
+            : PageReading.Refused(outcome.Failure!).As<PageSnapshot>();
     }
 
-    private static JsonObject Described(PageSnapshot snapshot, bool wholePage) => new()
+    /// <summary>The words that go before the picture: what it shows, where it came from and whether it stops short of the page.</summary>
+    public static JsonObject Described(PageSnapshot snapshot, bool wholePage) => new()
     {
         ["url"] = snapshot.Final.Text,
         ["requested"] = snapshot.Final != snapshot.Requested ? snapshot.Requested.Text : null,

@@ -12,10 +12,10 @@ namespace Snail.MCP.Playwright.Application;
 public static class Piece
 {
     /// <summary>The piece of <paramref name="page"/> that starts at <paramref name="from"/>, or why there is none.</summary>
-    public static Answer Of(PageContent page, int from, int maxCharacters) =>
+    public static Answer<JsonNode> Of(PageContent page, int from, int maxCharacters) =>
         from > 0 && from >= page.Text.Length
             ? Answer.Failed(Messages.FromBeyondTheEnd(from, page.Text.Length))
-            : Answer.Ok(Described(page, from, maxCharacters));
+            : Answer.Ok<JsonNode>(Described(page, from, maxCharacters));
 
     /// <summary>The piece as a caller reads it: where the page is, how much of it this is, and the text.</summary>
     public static JsonObject Described(PageContent page, int from, int maxCharacters)

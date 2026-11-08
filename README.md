@@ -95,11 +95,15 @@ travel wherever they are copied. Its fields are the variables' names after the p
 { "Engines": "DuckDuckGo,Bing", "Web": { "Identity": { "Proxies": ["http://user:password@proxy:8080"] } } }
 ```
 
-Every variable begins with `SNAIL_MCP_PLAYWRIGHT_`. The server's own settings:
+Every variable begins with `SNAIL_MCP_PLAYWRIGHT_`. A settings file may nest the server's own settings, the
+endpoint's among them, under `Snail`; a key at the root wins. The server's own settings:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `PORT` | — | Port to answer sessions on; unset means stdio. |
+| `PORT` | — | Port to answer sessions on at `/mcp`; unset or `0` means stdio. Inside a container the port is opened on every interface, anywhere else on loopback. |
+| `TRANSPORT` | — | `Http` or `Stdio`, said outright; with `Http` the server listens at `URL`. |
+| `URL` | `http://127.0.0.1:8822/` | Where HTTP listens when `TRANSPORT` is `Http`; a `URL` alone does not mean HTTP. Outside a container it must be a loopback address. |
+| `LISTENS_ON_EVERY_INTERFACE` | `false` | Refused outside a container, as a `0.0.0.0` URL or one beyond loopback is: the server has no token, so it opens the network only from inside its image. |
 | `ENGINES` | `DuckDuckGo,Bing,Brave` | Search engines to ask. `Google` exists and is off by default: it answers by address, not by query. |
 | `SEARCH_SECONDS` | `60` | How long one search may take; an engine that does not open in time is not asked and says so. |
 | `ALLOW_PRIVATE_ADDRESSES` | `false` | Whether addresses inside the deployment's own network may be read. |
@@ -134,7 +138,8 @@ private address is not caught by that rule; the browser's own network is what an
 ## Snail.Swarm.Agent
 
 The platform reaches the server at an address and names the tools a role may use in it
-(`…/mcp?tool=playwright_search&tool=playwright_fetch`); the server refuses anything else at the door.
+(`…/mcp?tool=playwright_search&tool=playwright_fetch`); the server lists those alone and refuses anything else at
+the door, in the answer envelope with `type` `notGranted`.
 What the platform needs is in `deploy/swarm/`:
 
 - `catalog-entry.json` — the entry for `src/Dashboard/Mcp/catalog.json`;

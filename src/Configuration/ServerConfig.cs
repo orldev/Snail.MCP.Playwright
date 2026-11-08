@@ -6,14 +6,6 @@ public sealed class ServerConfig
     /// <summary>The section a settings file may nest these under.</summary>
     public const string SectionName = "Snail";
 
-    /// <summary>Port to answer on; none means the server is started as a program and speaks stdio.</summary>
-    /// <remarks>
-    /// One knob decides the whole shape of the process, because the two shapes serve different callers:
-    /// at an address it stands beside the browser and behind every worker of a machine, as a program it
-    /// belongs to the one client that started it.
-    /// </remarks>
-    public int Port { get; set; }
-
     /// <summary>The search engines to ask, comma-separated: DuckDuckGo, Bing, Brave, Google.</summary>
     public string Engines { get; set; } = SearchEngines.Default;
 

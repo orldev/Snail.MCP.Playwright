@@ -14,7 +14,7 @@ namespace Snail.MCP.Playwright.Application;
 public sealed class PageWalking(IPageAgent agent, AddressRules rules)
 {
     /// <summary>The text of the page after the moves were made, or the move the site did not answer.</summary>
-    public async Task<Answer> PerformAsync(string url, IReadOnlyList<Move>? moves, int maxCharacters, CancellationToken cancellationToken = default)
+    public async Task<Answer<JsonNode>> PerformAsync(string url, IReadOnlyList<Move>? moves, int maxCharacters, CancellationToken cancellationToken = default)
     {
         var address = Link.Of(url ?? string.Empty);
 
@@ -25,8 +25,8 @@ public sealed class PageWalking(IPageAgent agent, AddressRules rules)
         var outcome = await agent.PerformAsync(errand, cancellationToken);
 
         return outcome.TryGetValue(out var page)
-            ? Answer.Ok(Described(page, maxCharacters))
-            : Answer.Stopped(Described(outcome.Failure!), Messages.Walked(outcome.Failure!), Messages.WalkHintFor(outcome.Failure!));
+            ? Answer.Ok<JsonNode>(Described(page, maxCharacters))
+            : Answer.Failed(Messages.Walked(outcome.Failure!), Messages.WalkHintFor(outcome.Failure!), details: Described(outcome.Failure!));
     }
 
     private string? Refusal(Link address, IReadOnlyList<Move>? moves, int maxCharacters)

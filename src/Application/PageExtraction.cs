@@ -11,7 +11,7 @@ namespace Snail.MCP.Playwright.Application;
 public sealed class PageExtraction(PageReading pages, AddressRules rules, IMarkupSelection selection)
 {
     /// <summary>What the expression matches in the page: the text of each element, or one attribute of each.</summary>
-    public async Task<Answer> SelectAsync(string url, string? xpath, string? css, string? attribute, int limit, CancellationToken cancellationToken = default)
+    public async Task<Answer<JsonNode>> SelectAsync(string url, string? xpath, string? css, string? attribute, int limit, CancellationToken cancellationToken = default)
     {
         var address = Link.Of(url ?? string.Empty);
 
@@ -27,7 +27,7 @@ public sealed class PageExtraction(PageReading pages, AddressRules rules, IMarku
         var selected = selection.Take(page.Html, expression, Named(attribute), page.Final.Address ?? address.Address!, limit);
 
         return selected.IsValid
-            ? Answer.Ok(new JsonObject
+            ? Answer.Ok<JsonNode>(new JsonObject
             {
                 ["url"] = page.Final.Text,
                 ["title"] = page.Title,

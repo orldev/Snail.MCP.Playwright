@@ -23,9 +23,9 @@ public sealed class PageReadingTests
         var answer = await Reading(reader).ReadAsync(Page, 0, Limits.DefaultCharacters);
 
         Assert.True(answer.IsSuccess);
-        Assert.Equal("All there is.", answer.Data!["text"]!.GetValue<string>());
-        Assert.Equal("Short", answer.Data["title"]!.GetValue<string>());
-        Assert.Null(answer.Data["next"]);
+        Assert.Equal("All there is.", answer.Value!["text"]!.GetValue<string>());
+        Assert.Equal("Short", answer.Value["title"]!.GetValue<string>());
+        Assert.Null(answer.Value["next"]);
     }
 
     /// <summary>A page cut without a word reads as a page that ended.</summary>
@@ -36,9 +36,9 @@ public sealed class PageReadingTests
 
         var answer = await Reading(reader).ReadAsync(Page, 0, 500);
 
-        Assert.Equal(500, answer.Data!["text"]!.GetValue<string>().Length);
-        Assert.Equal(500, answer.Data["next"]!.GetValue<int>());
-        Assert.Equal(1200, answer.Data["characters"]!["total"]!.GetValue<int>());
+        Assert.Equal(500, answer.Value!["text"]!.GetValue<string>().Length);
+        Assert.Equal(500, answer.Value["next"]!.GetValue<int>());
+        Assert.Equal(1200, answer.Value["characters"]!["total"]!.GetValue<int>());
     }
 
     [Fact]
@@ -53,8 +53,8 @@ public sealed class PageReadingTests
         {
             var answer = await reading.ReadAsync(Page, from.Value, 500);
 
-            pieces.Add(answer.Data!["text"]!.GetValue<string>());
-            from = answer.Data["next"]?.GetValue<int>();
+            pieces.Add(answer.Value!["text"]!.GetValue<string>());
+            from = answer.Value["next"]?.GetValue<int>();
         }
 
         Assert.Equal(text, string.Concat(pieces));
@@ -108,10 +108,10 @@ public sealed class PageReadingTests
         var reading = Reading(new FakeReader(_clock).Serving(Page, text));
 
         var first = await reading.ReadAsync(Page, 0, 500);
-        var second = await reading.ReadAsync(Page, first.Data!["next"]!.GetValue<int>(), 500);
+        var second = await reading.ReadAsync(Page, first.Value!["next"]!.GetValue<int>(), 500);
 
-        Assert.Equal(499, first.Data["text"]!.GetValue<string>().Length);
-        Assert.StartsWith("😀", second.Data!["text"]!.GetValue<string>(), StringComparison.Ordinal);
+        Assert.Equal(499, first.Value["text"]!.GetValue<string>().Length);
+        Assert.StartsWith("😀", second.Value!["text"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -122,8 +122,8 @@ public sealed class PageReadingTests
         var answer = await Reading(reader).ReadAsync(Page, 0, Limits.DefaultCharacters);
 
         Assert.False(answer.IsSuccess);
-        Assert.Equal("Blocked", answer.Data!["kind"]!.GetValue<string>());
-        Assert.Equal(90, answer.Data["retryAfterSeconds"]!.GetValue<long>());
+        Assert.Equal("Blocked", answer.Details!["kind"]!.GetValue<string>());
+        Assert.Equal(90, answer.Details["retryAfterSeconds"]!.GetValue<long>());
         Assert.Contains("another site", answer.Hint, StringComparison.Ordinal);
         Assert.Contains("90 seconds", answer.Hint, StringComparison.Ordinal);
     }
@@ -135,8 +135,8 @@ public sealed class PageReadingTests
         var answer = await Reading(new FakeReader(_clock)).ReadAsync("https://example.org/missing", 0, Limits.DefaultCharacters);
 
         Assert.False(answer.IsSuccess);
-        Assert.Equal(404, answer.Data!["status"]!.GetValue<int>());
-        Assert.False(answer.Data["isWorthRetrying"]!.GetValue<bool>());
+        Assert.Equal(404, answer.Details!["status"]!.GetValue<int>());
+        Assert.False(answer.Details["isWorthRetrying"]!.GetValue<bool>());
         Assert.Contains("does not exist", answer.Hint, StringComparison.Ordinal);
     }
 

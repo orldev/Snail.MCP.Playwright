@@ -8,7 +8,7 @@ namespace Snail.MCP.Playwright.Application;
 public sealed class PageReading(IPageReader reader, AddressRules rules, PageMemory memory)
 {
     /// <summary>The text of the page from <paramref name="from"/> on, as much of it as one answer may carry.</summary>
-    public async Task<Answer> ReadAsync(string url, int from, int maxCharacters, CancellationToken cancellationToken = default)
+    public async Task<Answer<JsonNode>> ReadAsync(string url, int from, int maxCharacters, CancellationToken cancellationToken = default)
     {
         var address = Link.Of(url ?? string.Empty);
 
@@ -37,8 +37,8 @@ public sealed class PageReading(IPageReader reader, AddressRules rules, PageMemo
     }
 
     /// <summary>A failed read as an answer: what happened, and what it calls for.</summary>
-    public static Answer Refused(PageFailure failure) =>
-        Answer.Stopped(Described(failure), Messages.Said(failure), Messages.HintFor(failure));
+    public static Answer<JsonNode> Refused(PageFailure failure) =>
+        Answer.Failed(Messages.Said(failure), Messages.HintFor(failure), details: Described(failure));
 
     private string? Refusal(Link address, int from, int maxCharacters)
     {

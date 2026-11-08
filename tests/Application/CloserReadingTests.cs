@@ -38,8 +38,8 @@ public sealed class CloserReadingTests
         var answer = await extraction.SelectAsync(Page, "//tr", null, null, Limits.DefaultSelected);
 
         Assert.True(answer.IsSuccess);
-        Assert.Equal("Wheat 210", answer.Data!["pieces"]![0]!.GetValue<string>());
-        Assert.Equal(1, answer.Data["matched"]!.GetValue<int>());
+        Assert.Equal("Wheat 210", answer.Value!["pieces"]![0]!.GetValue<string>());
+        Assert.Equal(1, answer.Value["matched"]!.GetValue<int>());
     }
 
     /// <summary>A caller reads a page, sees a table in its text and asks for the rows: that is one visit, not two.</summary>
@@ -63,7 +63,7 @@ public sealed class CloserReadingTests
         var answer = await extraction.SelectAsync(Page, "//article", null, null, Limits.DefaultSelected);
 
         Assert.True(answer.IsSuccess);
-        Assert.Contains("matched nothing", answer.Data!["note"]!.GetValue<string>(), StringComparison.Ordinal);
+        Assert.Contains("matched nothing", answer.Value!["note"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
     [Theory]
@@ -89,7 +89,7 @@ public sealed class CloserReadingTests
 
         var answer = await extraction.SelectAsync(Page, null, "td", null, Limits.DefaultSelected);
 
-        Assert.Equal(["Wheat", "210"], answer.Data!["pieces"]!.AsArray().Select(piece => piece!.GetValue<string>()));
+        Assert.Equal(["Wheat", "210"], answer.Value!["pieces"]!.AsArray().Select(piece => piece!.GetValue<string>()));
     }
 
     /// <summary>Which language an expression is in is said, never guessed: both at once is a question with two answers.</summary>
@@ -114,9 +114,9 @@ public sealed class CloserReadingTests
 
         var answer = await fields.TakeAsync(Page, [new Field("price", Css: ["td.price", "tr td:nth-child(2)"])]);
 
-        Assert.Equal("210", answer.Data!["fields"]!["price"]!.GetValue<string>());
-        Assert.Equal("tr td:nth-child(2)", answer.Data["found"]![0]!["css"]!.GetValue<string>());
-        Assert.Null(answer.Data["missing"]);
+        Assert.Equal("210", answer.Value!["fields"]!["price"]!.GetValue<string>());
+        Assert.Equal("tr td:nth-child(2)", answer.Value["found"]![0]!["css"]!.GetValue<string>());
+        Assert.Null(answer.Value["missing"]);
     }
 
     [Fact]
@@ -126,9 +126,9 @@ public sealed class CloserReadingTests
 
         var answer = await fields.TakeAsync(Page, [new Field("grain", Css: ["td:first-child"]), new Field("stock", Css: [".stock"], XPath: ["//span[@class='stock']"])]);
 
-        Assert.Equal("Wheat", answer.Data!["fields"]!["grain"]!.GetValue<string>());
-        Assert.Equal(["stock"], answer.Data["missing"]!.AsArray().Select(name => name!.GetValue<string>()));
-        Assert.Contains("rebuilt", answer.Data["note"]!.GetValue<string>(), StringComparison.Ordinal);
+        Assert.Equal("Wheat", answer.Value!["fields"]!["grain"]!.GetValue<string>());
+        Assert.Equal(["stock"], answer.Value["missing"]!.AsArray().Select(name => name!.GetValue<string>()));
+        Assert.Contains("rebuilt", answer.Value["note"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -138,7 +138,7 @@ public sealed class CloserReadingTests
 
         var answer = await fields.TakeAsync(Page, [new Field("cells", XPath: ["//td"], IsEveryMatchWanted: true)]);
 
-        Assert.Equal(["Wheat", "210"], answer.Data!["fields"]!["cells"]!.AsArray().Select(cell => cell!.GetValue<string>()));
+        Assert.Equal(["Wheat", "210"], answer.Value!["fields"]!["cells"]!.AsArray().Select(cell => cell!.GetValue<string>()));
     }
 
     [Fact]
@@ -167,12 +167,11 @@ public sealed class CloserReadingTests
     {
         var snapshots = new FakeSnapshots();
 
-        var answer = await new PagePictures(snapshots, Rules).TakeAsync(Page, wholePage: false);
+        var taken = await new PagePictures(snapshots, Rules).TakeAsync(Page, wholePage: false);
 
-        Assert.True(answer.IsSuccess);
-        Assert.Equal(FakeSnapshots.Jpeg, answer.Picture!.Bytes.ToArray());
-        Assert.Equal(PageSnapshot.MediaType, answer.Picture.MediaType);
-        Assert.Equal(1280, answer.Data!["width"]!.GetValue<int>());
+        Assert.True(taken.IsSuccess);
+        Assert.Equal(FakeSnapshots.Jpeg, taken.Value!.Image.ToArray());
+        Assert.Equal(1280, PagePictures.Described(taken.Value, wholePage: false)["width"]!.GetValue<int>());
         Assert.Equal(SnapshotFrame.Screen, snapshots.Framed);
     }
 
@@ -180,10 +179,11 @@ public sealed class CloserReadingTests
     [Fact]
     public async Task Screenshot_OfAScreenWithMorePageBelowIt_SaysHowToSeeTheRest()
     {
-        var answer = await new PagePictures(new FakeSnapshots(), Rules).TakeAsync(Page, wholePage: false);
+        var taken = await new PagePictures(new FakeSnapshots(), Rules).TakeAsync(Page, wholePage: false);
+        var described = PagePictures.Described(taken.Value!, wholePage: false);
 
-        Assert.True(answer.Data!["isCut"]!.GetValue<bool>());
-        Assert.Contains("whole page", answer.Data["note"]!.GetValue<string>(), StringComparison.Ordinal);
+        Assert.True(described["isCut"]!.GetValue<bool>());
+        Assert.Contains("whole page", described["note"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -201,11 +201,11 @@ public sealed class CloserReadingTests
     {
         var refused = Outcome<PageSnapshot, PageFailure>.Failed(new PageFailure(FailureKind.Blocked, "a wall") { Address = Link.Of(Page) });
 
-        var answer = await new PagePictures(new FakeSnapshots(refused), Rules).TakeAsync(Page, wholePage: false);
+        var taken = await new PagePictures(new FakeSnapshots(refused), Rules).TakeAsync(Page, wholePage: false);
 
-        Assert.False(answer.IsSuccess);
-        Assert.Null(answer.Picture);
-        Assert.Equal("Blocked", answer.Data!["kind"]!.GetValue<string>());
+        Assert.False(taken.IsSuccess);
+        Assert.Null(taken.Value);
+        Assert.Equal("Blocked", taken.Details!["kind"]!.GetValue<string>());
     }
 
     [Fact]
@@ -213,9 +213,9 @@ public sealed class CloserReadingTests
     {
         var snapshots = new FakeSnapshots();
 
-        var answer = await new PagePictures(snapshots, Rules).TakeAsync("http://minio:9000/", wholePage: false);
+        var taken = await new PagePictures(snapshots, Rules).TakeAsync("http://minio:9000/", wholePage: false);
 
-        Assert.False(answer.IsSuccess);
+        Assert.False(taken.IsSuccess);
         Assert.Null(snapshots.Framed);
     }
 
@@ -255,9 +255,9 @@ public sealed class CloserReadingTests
 
         var answer = await new PageWalking(agent, Rules).PerformAsync(Page, [new Move("click", Css: "#go")], 500);
 
-        Assert.Equal(500, answer.Data!["text"]!.GetValue<string>().Length);
-        Assert.True(answer.Data["isCut"]!.GetValue<bool>());
-        Assert.Null(answer.Data["next"]);
+        Assert.Equal(500, answer.Value!["text"]!.GetValue<string>().Length);
+        Assert.True(answer.Value["isCut"]!.GetValue<bool>());
+        Assert.Null(answer.Value["next"]);
     }
 
     /// <summary>The toolkit describes the page a move failed on, and the next attempt is written from that description.</summary>

@@ -12,7 +12,7 @@ namespace Snail.MCP.Playwright.Application;
 public sealed class BatchReading(ICrawler crawler, AddressRules rules, PageMemory memory)
 {
     /// <summary>A piece of every page that answered, and the reason for every one that did not.</summary>
-    public async Task<Answer> ReadAsync(IReadOnlyList<string>? urls, int maxCharactersEach, CancellationToken cancellationToken = default)
+    public async Task<Answer<JsonNode>> ReadAsync(IReadOnlyList<string>? urls, int maxCharactersEach, CancellationToken cancellationToken = default)
     {
         var asked = Asked(urls);
 
@@ -23,8 +23,8 @@ public sealed class BatchReading(ICrawler crawler, AddressRules rules, PageMemor
         var answered = Described(asked, read, maxCharactersEach);
 
         return read.Values.Any(outcome => outcome.IsSuccess)
-            ? Answer.Ok(answered)
-            : Answer.Stopped(answered, Messages.NothingRead(asked.Count), Messages.NothingReadHint);
+            ? Answer.Ok<JsonNode>(answered)
+            : Answer.Failed(Messages.NothingRead(asked.Count), Messages.NothingReadHint, details: answered);
     }
 
     private async Task<Dictionary<Link, Outcome<PageContent, PageFailure>>> ReadAsync(IReadOnlyList<Link> admitted, CancellationToken cancellationToken)

@@ -12,7 +12,7 @@ namespace Snail.MCP.Playwright.Application;
 public sealed class PageFields(PageReading pages, AddressRules rules, IMarkupSelection selection)
 {
     /// <summary>The values of the fields in the page, and how each was found.</summary>
-    public async Task<Answer> TakeAsync(string url, IReadOnlyList<Field>? fields, CancellationToken cancellationToken = default)
+    public async Task<Answer<JsonNode>> TakeAsync(string url, IReadOnlyList<Field>? fields, CancellationToken cancellationToken = default)
     {
         var address = Link.Of(url ?? string.Empty);
 
@@ -52,7 +52,7 @@ public sealed class PageFields(PageReading pages, AddressRules rules, IMarkupSel
             });
         }
 
-        return Answer.Ok(new JsonObject
+        return Answer.Ok<JsonNode>(new JsonObject
         {
             ["url"] = page.Final.Text,
             ["title"] = page.Title,

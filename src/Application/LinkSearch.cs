@@ -12,7 +12,7 @@ namespace Snail.MCP.Playwright.Application;
 public sealed class LinkSearch(IWebSearch search, ServerConfig config)
 {
     /// <summary>The links the engines offer for these queries, and what every engine did to find them.</summary>
-    public async Task<Answer> FindAsync(IReadOnlyList<string>? queries, int limit, CancellationToken cancellationToken = default)
+    public async Task<Answer<JsonNode>> FindAsync(IReadOnlyList<string>? queries, int limit, CancellationToken cancellationToken = default)
     {
         var asked = Asked(queries);
 
@@ -22,8 +22,8 @@ public sealed class LinkSearch(IWebSearch search, ServerConfig config)
         var outcome = await search.FindAsync(asked, TimeSpan.FromSeconds(config.SearchSeconds), cancellationToken);
 
         return outcome.IsAnswered
-            ? Answer.Ok(Described(outcome, limit))
-            : Answer.Stopped(Described(outcome, limit), Messages.NobodyAnswered, Messages.HintFor(outcome.Attempts));
+            ? Answer.Ok<JsonNode>(Described(outcome, limit))
+            : Answer.Failed(Messages.NobodyAnswered, Messages.HintFor(outcome.Attempts), details: Described(outcome, limit));
     }
 
     private static string? Refusal(IReadOnlyList<string> asked, int limit)

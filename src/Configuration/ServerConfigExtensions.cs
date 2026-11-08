@@ -32,8 +32,8 @@ public static class ServerConfigExtensions
 
     /// <summary>What the settings say the server is, read before there is a host to read it into.</summary>
     /// <remarks>
-    /// Read first and separately because the answer decides which host is built at all: a port means a
-    /// web host listening for sessions, no port means a console speaking stdio to its parent.
+    /// Where it answers is not among them: <c>McpEndpoint</c> of Snail.Sdk reads <c>PORT</c>, <c>TRANSPORT</c> and
+    /// <c>URL</c> from the same settings and decides which host is built at all.
     /// </remarks>
     public static ServerConfig Read(IConfiguration settings)
     {
@@ -51,9 +51,6 @@ public static class ServerConfigExtensions
     internal static void Validate(ServerConfig config)
     {
         var faults = new List<string>();
-
-        if (config.Port is < 0 or > 65535)
-            faults.Add($"Port must be between 0 and 65535, not {config.Port}");
 
         if (config.BrowserProbeSeconds is < 1 or > 120)
             faults.Add($"BrowserProbeSeconds must be between 1 and 120, not {config.BrowserProbeSeconds}");
@@ -77,6 +74,6 @@ public static class ServerConfigExtensions
             faults.Add($"Engines names {string.Join(", ", unknown)}, and the engines there are: {string.Join(", ", SearchEngines.All)}");
 
         if (faults.Count > 0)
-            throw new InvalidOperationException($"invalid configuration: {string.Join("; ", faults)}");
+            throw new StartRefusedException($"invalid configuration: {string.Join("; ", faults)}");
     }
 }

@@ -1,6 +1,6 @@
 using System.Net;
 using Snail.MCP.Playwright.Configuration;
-using Snail.MCP.Playwright.Extensions;
+using Snail.Sdk.Mcp.Http;
 
 namespace Snail.MCP.Playwright.Tests.Live;
 
@@ -14,7 +14,7 @@ public sealed class LiveDiagnosticsTests
         await using var server = await ListeningServer.StartAsync(LiveFactAttribute.Browser);
         await using var client = await server.ConnectAsync();
 
-        var browser = (await client.CallToolAsync("playwright_diagnose", new Dictionary<string, object?>())).Data()["browser"]!;
+        var browser = (await client.CallToolAsync("playwright_diagnose", new Dictionary<string, object?>())).Data()!["browser"]!;
 
         Assert.True(browser["isReachable"]!.GetValue<bool>(), browser["error"]?.GetValue<string>());
         Assert.StartsWith(BrowserDefaults.FirefoxVersion, browser["version"]!.GetValue<string>(), StringComparison.Ordinal);
@@ -27,7 +27,7 @@ public sealed class LiveDiagnosticsTests
         await using var server = await ListeningServer.StartAsync(LiveFactAttribute.Browser);
         using var http = new HttpClient();
 
-        var answer = await http.GetAsync(new Uri($"{server.Address}{McpServerHost.HealthPath}"));
+        var answer = await http.GetAsync(new Uri($"{server.Address}{McpHttpHost.DefaultHealthPath}"));
 
         Assert.True(answer.StatusCode == HttpStatusCode.OK, await Told(answer));
     }

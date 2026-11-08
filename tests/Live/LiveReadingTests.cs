@@ -13,8 +13,8 @@ public sealed class LiveReadingTests
         var answer = await client.CallToolAsync("playwright_fetch", new Dictionary<string, object?> { ["url"] = "https://example.com/" });
 
         Assert.NotEqual(true, answer.IsError);
-        Assert.Equal("Example Domain", answer.Data()["title"]!.GetValue<string>());
-        Assert.Contains("documentation", answer.Data()["text"]!.GetValue<string>(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Example Domain", answer.Data()!["title"]!.GetValue<string>());
+        Assert.Contains("documentation", answer.Data()!["text"]!.GetValue<string>(), StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -32,7 +32,7 @@ public sealed class LiveReadingTests
             new Dictionary<string, object?> { ["queries"] = new[] { "postgresql documentation" }, ["limit"] = 5 });
 
         Assert.NotEqual(true, answer.IsError);
-        Assert.NotEmpty(answer.Data()["results"]!.AsArray());
-        Assert.All(answer.Data()["results"]!.AsArray(), result => Assert.StartsWith("http", result!["url"]!.GetValue<string>(), StringComparison.Ordinal));
+        Assert.NotEmpty(answer.Data()!["results"]!.AsArray());
+        Assert.All(answer.Data()!["results"]!.AsArray(), result => Assert.StartsWith("http", result!["url"]!.GetValue<string>(), StringComparison.Ordinal));
     }
 }

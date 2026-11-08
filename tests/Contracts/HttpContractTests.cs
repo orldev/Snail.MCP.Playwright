@@ -1,9 +1,12 @@
 using System.Net;
 using Microsoft.Extensions.DependencyInjection;
+using Snail.MCP.Playwright.Application;
 using Snail.MCP.Playwright.Configuration;
 using Snail.MCP.Playwright.Domain;
-using Snail.MCP.Playwright.Extensions;
 using Snail.MCP.Playwright.Tools.Prompts;
+using Snail.Sdk.Mcp.Hosting;
+using Snail.Sdk.Mcp.Hosting.Sessions;
+using Snail.Sdk.Mcp.Http;
 using Snail.Toolkit.Web.Search;
 
 namespace Snail.MCP.Playwright.Tests.Contracts;
@@ -18,8 +21,8 @@ public sealed class HttpContractTests
         await using var client = await server.ConnectAsync();
 
         Assert.NotNull(client.ServerInfo);
-        Assert.Equal(ThisAssembly.Name, client.ServerInfo.Name);
-        Assert.Equal(ThisAssembly.Version, client.ServerInfo.Version);
+        Assert.Equal(ServerIdentity.NameOf(typeof(Health).Assembly), client.ServerInfo.Name);
+        Assert.Equal(ServerIdentity.VersionOf(typeof(Health).Assembly), client.ServerInfo.Version);
         Assert.Equal(ServerGuidance.Instructions, client.ServerInstructions);
     }
 
@@ -45,14 +48,15 @@ public sealed class HttpContractTests
         var answer = await client.CallToolAsync("playwright_diagnose", new Dictionary<string, object?>());
 
         Assert.NotEqual(true, answer.IsError);
-        Assert.False(answer.Data()["browser"]!["isReachable"]!.GetValue<bool>());
-        Assert.Equal(Deployment.NoBrowser, answer.Data()["browser"]!["server"]!.GetValue<string>());
-        Assert.Contains(BrowserDefaults.Image, answer.Data()["browser"]!["hint"]!.GetValue<string>(), StringComparison.Ordinal);
+        Assert.False(answer.Data()!["browser"]!["isReachable"]!.GetValue<bool>());
+        Assert.Equal(Deployment.NoBrowser, answer.Data()!["browser"]!["server"]!.GetValue<string>());
+        Assert.Contains(BrowserDefaults.Image, answer.Data()!["browser"]!["hint"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
     /// <summary>
     /// The platform appends the role's tools to the address and expects the server to hold the line: a
-    /// list that the server ignores is a list in name only.
+    /// list that the server ignores is a list in name only. The server keeps no sessions, so the refusal speaks of
+    /// the request, which carries the grant in its own address.
     /// </summary>
     [Fact]
     public async Task Call_ToAToolTheSessionWasNotGranted_IsRefusedAtTheDoor()
@@ -60,10 +64,14 @@ public sealed class HttpContractTests
         await using var server = await ListeningServer.StartAsync();
         await using var client = await server.ConnectAsync("?tool=playwright_search");
 
+        var listed = await client.ListToolsAsync();
         var refused = await client.CallToolAsync("playwright_diagnose", new Dictionary<string, object?>());
 
+        Assert.Equal(["playwright_search"], listed.Select(tool => tool.Name));
         Assert.Equal(true, refused.IsError);
-        Assert.Contains("was not granted", refused.Text(), StringComparison.Ordinal);
+        Assert.False(refused.IsOk());
+        Assert.Equal("'playwright_diagnose' was not granted to this request, which may use playwright_search", refused.Error());
+        Assert.Equal(GrantOptions.NotGranted, refused.Type());
     }
 
     [Fact]
@@ -151,12 +159,8 @@ public sealed class HttpContractTests
     public async Task Request_CarryingAnOrigin_IsRefusedBeforeTheServerReadsIt()
     {
         await using var server = await ListeningServer.StartAsync();
-        using var client = new HttpClient();
-        client.DefaultRequestHeaders.Add("Origin", "https://page.example");
 
-        var answer = await client.PostAsync(new Uri($"{server.Address}{McpServerHost.Path}"), new StringContent("{}", System.Text.Encoding.UTF8, "application/json"));
-
-        Assert.Equal(HttpStatusCode.Forbidden, answer.StatusCode);
+        Assert.Empty(await HttpGuards.ProblemsAsync(server.Endpoint));
     }
 
     [Fact]
@@ -165,7 +169,7 @@ public sealed class HttpContractTests
         await using var server = await ListeningServer.StartAsync();
         using var client = new HttpClient();
 
-        var answer = await client.GetAsync(new Uri($"{server.Address}{McpServerHost.HealthPath}"));
+        var answer = await client.GetAsync(new Uri($"{server.Address}{McpHttpHost.DefaultHealthPath}"));
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, answer.StatusCode);
     }
