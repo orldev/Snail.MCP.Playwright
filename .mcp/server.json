@@ -21,9 +21,9 @@
         },
         {
           "name": "SNAIL_MCP_PLAYWRIGHT_ENGINES",
-          "description": "Search engines to ask, comma-separated: DuckDuckGo, Bing, Brave, Google. Google answers by address rather than by query and is off by default.",
+          "description": "Search engines to ask, comma-separated: DuckDuckGo, DuckDuckGoBrowser, Bing, Brave, Google. DuckDuckGo reads the HTML endpoint over HTTP without a browser, DuckDuckGoBrowser the site through the browser; DuckDuckGo and Google are off by default.",
           "isRequired": false,
-          "default": "DuckDuckGo,Bing,Brave"
+          "default": "DuckDuckGoBrowser,Bing,Brave"
         },
         {
           "name": "SNAIL_MCP_PLAYWRIGHT_BROWSER_PROBE_SECONDS",
@@ -141,9 +141,9 @@
         },
         {
           "name": "SNAIL_MCP_PLAYWRIGHT_ENGINES",
-          "description": "Search engines to ask, comma-separated: DuckDuckGo, Bing, Brave, Google. Google answers by address rather than by query and is off by default.",
+          "description": "Search engines to ask, comma-separated: DuckDuckGo, DuckDuckGoBrowser, Bing, Brave, Google. DuckDuckGo reads the HTML endpoint over HTTP without a browser, DuckDuckGoBrowser the site through the browser; DuckDuckGo and Google are off by default.",
           "isRequired": false,
-          "default": "DuckDuckGo,Bing,Brave"
+          "default": "DuckDuckGoBrowser,Bing,Brave"
         },
         {
           "name": "SNAIL_MCP_PLAYWRIGHT_BROWSER_PROBE_SECONDS",

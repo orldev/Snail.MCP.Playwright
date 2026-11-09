@@ -66,6 +66,9 @@ public static class BrowsingRegistrationExtensions
         {
             services.AddSearch(settings);
 
+            if (engines.Contains(SearchEngines.DuckDuckGoBrowser))
+                services.AddDuckDuckGo(settings);
+
             if (engines.Contains(SearchEngines.Bing))
                 services.AddBing(settings);
 

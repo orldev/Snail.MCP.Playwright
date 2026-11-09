@@ -21,7 +21,7 @@ services:
     environment:
       SNAIL_MCP_PLAYWRIGHT_PORT: 8822
       SNAIL_MCP_PLAYWRIGHT_WEB__SCRAPING__BROWSER_SERVER: ws://browser:3000/
-      SNAIL_MCP_PLAYWRIGHT_ENGINES: ${ENGINES:-DuckDuckGo,Bing,Brave}
+      SNAIL_MCP_PLAYWRIGHT_ENGINES: ${ENGINES:-DuckDuckGoBrowser,Bing,Brave}
     deploy:
       resources:
         limits:

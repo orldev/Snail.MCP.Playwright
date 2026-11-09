@@ -6,7 +6,7 @@ public sealed class ServerConfig
     /// <summary>The section a settings file may nest these under.</summary>
     public const string SectionName = "Snail";
 
-    /// <summary>The search engines to ask, comma-separated: DuckDuckGo, Bing, Brave, Google.</summary>
+    /// <summary>The search engines to ask, comma-separated: DuckDuckGo, DuckDuckGoBrowser, Bing, Brave, Google.</summary>
     public string Engines { get; set; } = SearchEngines.Default;
 
     /// <summary>Seconds <c>playwright_diagnose</c> waits for the browser before calling it unreachable.</summary>

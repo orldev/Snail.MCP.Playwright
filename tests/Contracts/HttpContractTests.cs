@@ -180,7 +180,7 @@ public sealed class HttpContractTests
         await using var server = await ListeningServer.StartAsync();
 
         Assert.Equal(
-            [SearchEngines.Bing, SearchEngines.Brave, SearchEngines.DuckDuckGo],
+            [SearchEngines.Bing, SearchEngines.Brave, SearchEngines.DuckDuckGoBrowser],
             [.. server.Services.GetServices<ISearchProvider>().Select(engine => engine.Name).Order(StringComparer.Ordinal)]);
     }
 
@@ -192,6 +192,17 @@ public sealed class HttpContractTests
 
         Assert.Equal(
             [SearchEngines.Bing, SearchEngines.Google],
+            [.. server.Services.GetServices<ISearchProvider>().Select(engine => engine.Name).Order(StringComparer.Ordinal)]);
+    }
+
+    /// <summary>The two readings of DuckDuckGo are two engines: naming the one over HTTP leaves the browser's out.</summary>
+    [Fact]
+    public async Task Search_WithDuckDuckGoOverHttpNamed_AsksTheEndpointInsteadOfTheSite()
+    {
+        await using var server = await ListeningServer.StartAsync(("ENGINES", "duckduckgo,bing"));
+
+        Assert.Equal(
+            [SearchEngines.Bing, SearchEngines.DuckDuckGo],
             [.. server.Services.GetServices<ISearchProvider>().Select(engine => engine.Name).Order(StringComparer.Ordinal)]);
     }
 }

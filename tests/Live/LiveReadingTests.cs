@@ -1,6 +1,8 @@
+using Snail.MCP.Playwright.Domain;
+
 namespace Snail.MCP.Playwright.Tests.Live;
 
-/// <summary>The two questions asked of the real web, through the real browser.</summary>
+/// <summary>The questions asked of the real web, through the real browser.</summary>
 [Collection(LiveBrowser.Name)]
 public sealed class LiveReadingTests
 {
@@ -34,5 +36,23 @@ public sealed class LiveReadingTests
         Assert.NotEqual(true, answer.IsError);
         Assert.NotEmpty(answer.Data()!["results"]!.AsArray());
         Assert.All(answer.Data()!["results"]!.AsArray(), result => Assert.StartsWith("http", result!["url"]!.GetValue<string>(), StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// DuckDuckGo read at its site through the browser, the one engine asked: links back mean it answered, from an
+    /// address whose HTTP endpoint times out.
+    /// </summary>
+    [LiveFact]
+    public async Task Search_OfDuckDuckGoThroughTheBrowser_ReturnsLinks()
+    {
+        await using var server = await ListeningServer.StartAsync([.. LiveFactAttribute.Browser, ("ENGINES", SearchEngines.DuckDuckGoBrowser)]);
+        await using var client = await server.ConnectAsync();
+
+        var answer = await client.CallToolAsync(
+            "playwright_search",
+            new Dictionary<string, object?> { ["queries"] = new[] { "postgresql documentation" }, ["limit"] = 5 });
+
+        Assert.True(answer.IsOk(), answer.Text());
+        Assert.NotEmpty(answer.Data()!["results"]!.AsArray());
     }
 }

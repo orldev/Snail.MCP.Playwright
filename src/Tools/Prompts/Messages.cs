@@ -213,7 +213,7 @@ public static class Messages
     public static string BrowserUnreachable(string? server) =>
         $"No browser answers at {server ?? "the configured address"}. Start the {BrowserDefaults.Image} container, " +
         $"or point {ServerSettings.PrefixOf(ServerConfigExtensions.Name)}WEB__SCRAPING__BROWSER_SERVER at the one that is running. " +
-        "Searching DuckDuckGo needs no browser; every other tool does.";
+        "Every tool needs it; only a search whose engines include DuckDuckGo over HTTP does not.";
 
     /// <summary>What a failed page read calls for, the site's own request to be left alone included.</summary>
     public static string HintFor(PageFailure failure)

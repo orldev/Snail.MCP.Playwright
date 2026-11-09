@@ -112,7 +112,7 @@ endpoint's among them, under `Snail`; a key at the root wins. The server's own s
 | `TRANSPORT` | — | `Http` or `Stdio`, said outright; with `Http` the server listens at `URL`. |
 | `URL` | `http://127.0.0.1:8822/` | Where HTTP listens when `TRANSPORT` is `Http`; a `URL` alone does not mean HTTP. Outside a container it must be a loopback address. |
 | `LISTENS_ON_EVERY_INTERFACE` | `false` | Refused outside a container, as a `0.0.0.0` URL or one beyond loopback is: the server has no token, so it opens the network only from inside its image. |
-| `ENGINES` | `DuckDuckGo,Bing,Brave` | Search engines to ask. `Google` exists and is off by default: it answers by address, not by query. |
+| `ENGINES` | `DuckDuckGoBrowser,Bing,Brave` | Search engines to ask. `DuckDuckGoBrowser` reads DuckDuckGo's site through the browser; `DuckDuckGo` reads its HTML endpoint over HTTP and needs no browser, for an exit the endpoint answers (from others it times out). `Google` answers by address, not by query. `DuckDuckGo` and `Google` are off by default. |
 | `SEARCH_SECONDS` | `60` | How long one search may take; an engine that does not open in time is not asked and says so. |
 | `ALLOW_PRIVATE_ADDRESSES` | `false` | Whether addresses inside the deployment's own network may be read. |
 | `PAGE_MEMORY_MINUTES` | `10` | How long a page that was read is remembered; `0` forgets at once. |

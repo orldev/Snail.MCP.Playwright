@@ -94,7 +94,7 @@ public sealed class ServerConfigTests
         var config = ServerConfigExtensions.Read(settings);
 
         Assert.Equal(McpTransport.Stdio, McpServerHost.EndpointOf(settings).Transport);
-        Assert.Equal([SearchEngines.DuckDuckGo, SearchEngines.Bing, SearchEngines.Brave], SearchEngines.Named(config.Engines));
+        Assert.Equal([SearchEngines.DuckDuckGoBrowser, SearchEngines.Bing, SearchEngines.Brave], SearchEngines.Named(config.Engines));
     }
 
     [Fact]
