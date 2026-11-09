@@ -103,6 +103,7 @@ public sealed class ServerConfigTests
 
     [Theory]
     [InlineData("BROWSER_PROBE_SECONDS", "0", "SNAIL_MCP_PLAYWRIGHT_BROWSER_PROBE_SECONDS")]
+    [InlineData("IDLE_TIMEOUT_MINUTES", "-1", "SNAIL_MCP_PLAYWRIGHT_IDLE_TIMEOUT_MINUTES")]
     [InlineData("ENGINES", "Yandex", "Yandex")]
     [InlineData("ENGINES", " , ", "SNAIL_MCP_PLAYWRIGHT_ENGINES")]
     public void Config_WithASettingOutOfRange_StopsTheStartAndNamesIt(string variable, string value, string named)

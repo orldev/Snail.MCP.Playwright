@@ -118,6 +118,7 @@ endpoint's among them, under `Snail`; a key at the root wins. The server's own s
 | `PAGE_MEMORY_MINUTES` | `10` | How long a page that was read is remembered; `0` forgets at once. |
 | `PAGE_MEMORY_PAGES` | `16` | Pages remembered at once. |
 | `PAGE_MEMORY_MEGABYTES` | `64` | Megabytes the remembered pages may hold together; the oldest give way first. |
+| `IDLE_TIMEOUT_MINUTES` | `60` | Over stdio, minutes without an MCP message before the server exits, so a process its client lost does not hold the browser for ever; `0` keeps it running. A server over HTTP never exits on its own. |
 | `BROWSER_PROBE_SECONDS` | `10` | How long `playwright_diagnose` waits for the browser. |
 
 The toolkit's settings travel under the same prefix: `WEB__SECTION__NAME` is the toolkit's

@@ -23,13 +23,14 @@ public static class McpServerRegistrationExtensions
             return builder;
         }
 
-        /// <summary>Configures the server to speak stdio to the process that started it.</summary>
+        /// <summary>Configures the server to speak stdio to the process that started it, and to exit once that process has gone quiet.</summary>
         public IHostApplicationBuilder ConfigureMcpServerAsAProgram(McpEndpoint endpoint, ServerConfig config, IConfiguration settings)
         {
             builder.Services
                 .AddSingleton(endpoint)
                 .AddSingleton(config)
                 .AddBrowsing(config, settings)
+                .AddIdleShutdown(TimeSpan.FromMinutes(config.IdleTimeoutMinutes))
                 .AddMcpTransportAsAProgram();
 
             return builder;

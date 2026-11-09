@@ -75,6 +75,9 @@ public static class ServerConfigExtensions
         if (config.PageMemoryMegabytes is < 1 or > 1024)
             faults.Add($"{ServerSettings.NameOfSetting(Name, "PageMemoryMegabytes")} must be between 1 and 1024, not {config.PageMemoryMegabytes}");
 
+        if (config.IdleTimeoutMinutes is < 0 or > 1440)
+            faults.Add($"{ServerSettings.NameOfSetting(Name, "IdleTimeoutMinutes")} must be between 0 and 1440, not {config.IdleTimeoutMinutes}");
+
         if (SearchEngines.Named(config.Engines) is { Count: 0 })
             faults.Add($"{ServerSettings.NameOfSetting(Name, "Engines")} names no search engine, which leaves playwright_search with nobody to ask");
 

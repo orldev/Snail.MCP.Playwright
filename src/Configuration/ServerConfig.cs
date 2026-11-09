@@ -40,4 +40,12 @@ public sealed class ServerConfig
     /// 32 ordinary heavy pages held 257 MB on 2026-10-16 — half of what the deployment gives the whole server.
     /// </remarks>
     public int PageMemoryMegabytes { get; set; } = 64;
+
+    /// <summary>Over stdio, minutes without an MCP message before the server exits by itself; 0 keeps it running. A server over HTTP never exits on its own.</summary>
+    /// <remarks>
+    /// For the process a client started and then lost without closing its input: it would wait for ever, holding
+    /// its Node driver and its connection to the browser. An hour, as Snail.MCP.Figma and Memory wait: the longest
+    /// call, a site walked for ten minutes, is well inside it.
+    /// </remarks>
+    public int IdleTimeoutMinutes { get; set; } = 60;
 }
