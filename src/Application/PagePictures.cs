@@ -23,7 +23,7 @@ public sealed class PagePictures(IPageSnapshots snapshots, AddressRules rules)
 
         return outcome.TryGetValue(out var snapshot)
             ? Answer.Ok(snapshot)
-            : PageReading.Refused(outcome.Failure!).As<PageSnapshot>();
+            : PageReading.Refused(outcome.Failure).As<PageSnapshot>();
     }
 
     /// <summary>The words that go before the picture: what it shows, where it came from and whether it stops short of the page.</summary>

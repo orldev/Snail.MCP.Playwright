@@ -31,7 +31,7 @@ ARG VERSION
 LABEL org.opencontainers.image.version=$VERSION
 # tini runs as process 1 and starts the program under it: .NET ends an unhandled exception with SIGABRT, which process
 # 1 of a container ignores, so run as process 1 itself a program that fails at start spins at a full core and never
-# exits, and nothing restarts it. Under tini it exits with 134.
+# exits, and nothing restarts it. Under tini a start refused for a setting exits with 1, a crash with 134.
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends tini \
     && rm -rf /var/lib/apt/lists/*

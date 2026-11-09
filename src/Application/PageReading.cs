@@ -19,7 +19,7 @@ public sealed class PageReading(IPageReader reader, AddressRules rules, PageMemo
 
         return outcome.TryGetValue(out var page)
             ? Piece.Of(page, from, maxCharacters)
-            : Refused(outcome.Failure!);
+            : Refused(outcome.Failure);
     }
 
     /// <summary>The page itself, from memory when it was read a moment ago and from the site otherwise.</summary>
