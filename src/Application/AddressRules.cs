@@ -23,12 +23,14 @@ public sealed class AddressRules(ServerConfig config)
     private static readonly string[] Inward = [".localhost", ".local", ".internal", ".lan", ".home.arpa"];
 
     /// <summary>Why this address will not be read, or null when it will.</summary>
-    public string? Refusal(Link link)
+    public AnswerFailure? Refusal(Link link)
     {
         if (link.Address is not { } address)
-            return Messages.NotAnAddress(link.Text);
+            return FailureTypes.Refused(Messages.NotAnAddress(link.Text));
 
-        return !config.AllowPrivateAddresses && IsInward(address.Host) ? Messages.InwardAddress(address.Host) : null;
+        return !config.AllowPrivateAddresses && IsInward(address.Host)
+            ? Answer.Failed(Messages.InwardAddress(address.Host), type: FailureTypes.PrivateAddress)
+            : null;
     }
 
     private static bool IsInward(string host)

@@ -19,28 +19,28 @@ public sealed class PageWalking(IPageAgent agent, AddressRules rules)
         var address = Link.Of(url ?? string.Empty);
 
         if (Refusal(address, moves, maxCharacters) is { } refusal)
-            return Answer.Failed(refusal, Messages.MoveHint);
+            return refusal with { Hint = Messages.MoveHint };
 
         var errand = new Errand(address, [.. moves!.Select(Stepped)]);
         var outcome = await agent.PerformAsync(errand, cancellationToken);
 
         return outcome.TryGetValue(out var page)
             ? Answer.Ok<JsonNode>(Described(page, maxCharacters))
-            : Answer.Failed(Messages.Walked(outcome.Failure!), Messages.WalkHintFor(outcome.Failure!), details: Described(outcome.Failure!));
+            : Answer.Failed(Messages.Walked(outcome.Failure!), Messages.WalkHintFor(outcome.Failure!), FailureTypes.Of(outcome.Failure!.Kind), Described(outcome.Failure!));
     }
 
-    private string? Refusal(Link address, IReadOnlyList<Move>? moves, int maxCharacters)
+    private AnswerFailure? Refusal(Link address, IReadOnlyList<Move>? moves, int maxCharacters)
     {
         if (rules.Refusal(address) is { } inadmissible)
             return inadmissible;
 
         if (moves is null or { Count: 0 or > Limits.MostMoves })
-            return Messages.MovesOutOfRange(moves?.Count ?? 0);
+            return FailureTypes.Refused(Messages.MovesOutOfRange(moves?.Count ?? 0));
 
         if (maxCharacters is < Limits.FewestCharacters or > Limits.MostCharacters)
-            return Messages.CharactersOutOfRange(maxCharacters);
+            return FailureTypes.Refused(Messages.CharactersOutOfRange(maxCharacters));
 
-        return FirstFault(moves);
+        return FirstFault(moves) is { } fault ? FailureTypes.Refused(fault) : null;
     }
 
     private static string? FirstFault(IReadOnlyList<Move> moves)

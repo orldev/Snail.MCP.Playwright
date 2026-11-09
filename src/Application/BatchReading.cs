@@ -17,14 +17,14 @@ public sealed class BatchReading(ICrawler crawler, AddressRules rules, PageMemor
         var asked = Asked(urls);
 
         if (Refusal(asked, maxCharactersEach) is { } refusal)
-            return Answer.Failed(refusal);
+            return refusal;
 
         var read = await ReadAsync([.. asked.Where(address => rules.Refusal(address) is null)], cancellationToken);
         var answered = Described(asked, read, maxCharactersEach);
 
         return read.Values.Any(outcome => outcome.IsSuccess)
             ? Answer.Ok<JsonNode>(answered)
-            : Answer.Failed(Messages.NothingRead(asked.Count), Messages.NothingReadHint, details: answered);
+            : Answer.Failed(Messages.NothingRead(asked.Count), Messages.NothingReadHint, FailureTypes.NothingRead, answered);
     }
 
     private async Task<Dictionary<Link, Outcome<PageContent, PageFailure>>> ReadAsync(IReadOnlyList<Link> admitted, CancellationToken cancellationToken)
@@ -67,17 +67,17 @@ public sealed class BatchReading(ICrawler crawler, AddressRules rules, PageMemor
         ["url"] = address.Text,
         ["kind"] = failure?.Kind.ToString(),
         ["status"] = failure?.StatusCode,
-        ["error"] = failure is null ? rules.Refusal(address) ?? Messages.NoAnswer : Messages.Said(failure),
+        ["error"] = failure is null ? rules.Refusal(address)?.Error ?? Messages.NoAnswer : Messages.Said(failure),
         ["hint"] = failure is null ? null : Messages.HintFor(failure)
     };
 
-    private static string? Refusal(IReadOnlyList<Link> asked, int maxCharactersEach)
+    private static AnswerFailure? Refusal(IReadOnlyList<Link> asked, int maxCharactersEach)
     {
         if (asked.Count is 0 or > Limits.MostAddresses)
-            return Messages.AddressesOutOfRange(asked.Count);
+            return FailureTypes.Refused(Messages.AddressesOutOfRange(asked.Count));
 
         return maxCharactersEach is < Limits.FewestCharacters or > Limits.MostCharactersEach
-            ? Messages.CharactersEachOutOfRange(maxCharactersEach)
+            ? FailureTypes.Refused(Messages.CharactersEachOutOfRange(maxCharactersEach))
             : null;
     }
 

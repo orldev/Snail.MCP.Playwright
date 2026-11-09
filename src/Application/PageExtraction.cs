@@ -16,7 +16,7 @@ public sealed class PageExtraction(PageReading pages, AddressRules rules, IMarku
         var address = Link.Of(url ?? string.Empty);
 
         if (Refusal(address, xpath, css, limit) is { } refusal)
-            return Answer.Failed(refusal, Messages.ExpressionHint);
+            return refusal with { Hint = Messages.ExpressionHint };
 
         var outcome = await pages.PageAsync(address, cancellationToken);
 
@@ -36,21 +36,21 @@ public sealed class PageExtraction(PageReading pages, AddressRules rules, IMarku
                 ["note"] = selected.Matched == 0 ? Messages.NothingSelected : null,
                 ["pieces"] = new JsonArray([.. selected.Pieces.Select(piece => (JsonNode)piece)])
             })
-            : Answer.Failed(Messages.ExpressionInvalid(expression, selected.Fault!), Messages.ExpressionHint);
+            : FailureTypes.Refused(Messages.ExpressionInvalid(expression, selected.Fault!)) with { Hint = Messages.ExpressionHint };
     }
 
     /// <summary>The attribute as the markup names it: without the at sign XPath writes before it, blank as none.</summary>
     internal static string? Named(string? attribute) =>
         string.IsNullOrWhiteSpace(attribute) ? null : attribute.Trim().TrimStart('@');
 
-    private string? Refusal(Link address, string? xpath, string? css, int limit)
+    private AnswerFailure? Refusal(Link address, string? xpath, string? css, int limit)
     {
         if (rules.Refusal(address) is { } inadmissible)
             return inadmissible;
 
         if (string.IsNullOrWhiteSpace(xpath) == string.IsNullOrWhiteSpace(css))
-            return Messages.ExpressionUnnamed;
+            return FailureTypes.Refused(Messages.ExpressionUnnamed);
 
-        return limit is < 1 or > Limits.MostSelected ? Messages.SelectedOutOfRange(limit) : null;
+        return limit is < 1 or > Limits.MostSelected ? FailureTypes.Refused(Messages.SelectedOutOfRange(limit)) : null;
     }
 }

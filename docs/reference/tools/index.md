@@ -5,7 +5,7 @@ The names, descriptions and schemas are generated from the server itself, so the
 
 An MCP server that lets an agent search the web and read pages through a real browser. It answers two questions and keeps them apart: where is this written about (queries in, links out) and what does this page say (an address in, its text out). A search never returns the content of a page, and a read never takes a query. Everything else it offers is a way of reading more, or more closely.
 
-Every answer is JSON with an `ok` flag. A failure carries `error`, a `hint` saying what that kind of failure calls for, and whatever was learned before it; in the protocol it is flagged `isError`.
+Every answer is JSON with an `ok` flag. A failure carries `error`, a `hint` saying what that kind of failure calls for, a `type` a program branches on — `arguments`, `privateAddress`, `unanswered`, `nothingRead`, or the kind of a page that failed, such as `blocked` or `robotsDisallowed` — and whatever was learned before it; in the protocol it is flagged `isError`.
 
 | Tool | Family | What it does |
 | --- | --- | --- |

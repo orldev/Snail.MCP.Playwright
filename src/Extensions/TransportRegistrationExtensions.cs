@@ -54,7 +54,7 @@ public static class TransportRegistrationExtensions
                     server.ServerInstructions = ServerGuidance.Instructions;
                 })
                 .ExplainFailures()
-                .RefuseWhatWasNotGranted()
+                .WithSessionGrant()
                 .WithTools<SearchTools>()
                 .WithTools<PageTools>()
                 .WithTools<CloserTools>()

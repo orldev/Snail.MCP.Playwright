@@ -13,7 +13,7 @@ public sealed class PageReading(IPageReader reader, AddressRules rules, PageMemo
         var address = Link.Of(url ?? string.Empty);
 
         if (Refusal(address, from, maxCharacters) is { } refusal)
-            return Answer.Failed(refusal);
+            return refusal;
 
         var outcome = await PageAsync(address, cancellationToken);
 
@@ -38,18 +38,18 @@ public sealed class PageReading(IPageReader reader, AddressRules rules, PageMemo
 
     /// <summary>A failed read as an answer: what happened, and what it calls for.</summary>
     public static Answer<JsonNode> Refused(PageFailure failure) =>
-        Answer.Failed(Messages.Said(failure), Messages.HintFor(failure), details: Described(failure));
+        Answer.Failed(Messages.Said(failure), Messages.HintFor(failure), FailureTypes.Of(failure.Kind), Described(failure));
 
-    private string? Refusal(Link address, int from, int maxCharacters)
+    private AnswerFailure? Refusal(Link address, int from, int maxCharacters)
     {
         if (rules.Refusal(address) is { } inadmissible)
             return inadmissible;
 
         if (from < 0)
-            return Messages.FromOutOfRange(from);
+            return FailureTypes.Refused(Messages.FromOutOfRange(from));
 
         return maxCharacters is < Limits.FewestCharacters or > Limits.MostCharacters
-            ? Messages.CharactersOutOfRange(maxCharacters)
+            ? FailureTypes.Refused(Messages.CharactersOutOfRange(maxCharacters))
             : null;
     }
 

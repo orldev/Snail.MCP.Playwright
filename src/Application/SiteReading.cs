@@ -24,34 +24,38 @@ public sealed class SiteReading(ICrawler crawler, AddressRules rules)
         var start = Link.Of(url ?? string.Empty);
 
         if (Refusal(start, maxPages, maxDepth, seconds, maxCharactersEach) is { } refusal)
-            return Answer.Failed(refusal);
+            return refusal;
 
         var scope = crawler.ScopeOf(start) with { MaxPages = maxPages, MaxDepth = maxDepth, Budget = TimeSpan.FromSeconds(seconds) };
         var report = await crawler.CrawlAsync(scope, cancellationToken);
 
         return report.Stop is CrawlStop.Refused
-            ? Answer.Failed(Messages.CrawlStops[CrawlStop.Refused], WhyRefused(report), details: Described(report, maxCharactersEach))
+            ? Answer.Failed(Messages.CrawlStops[CrawlStop.Refused], WhyRefused(report), TypeOf(report), Described(report, maxCharactersEach))
             : Answer.Ok<JsonNode>(Described(report, maxCharactersEach));
     }
 
-    private string? Refusal(Link start, int maxPages, int maxDepth, int seconds, int maxCharactersEach)
+    private AnswerFailure? Refusal(Link start, int maxPages, int maxDepth, int seconds, int maxCharactersEach)
     {
         if (rules.Refusal(start) is { } inadmissible)
             return inadmissible;
 
         if (maxPages is < 1 or > Limits.MostSitePages)
-            return Messages.SitePagesOutOfRange(maxPages);
+            return FailureTypes.Refused(Messages.SitePagesOutOfRange(maxPages));
 
         if (maxDepth is < 0 or > Limits.MostSiteDepth)
-            return Messages.SiteDepthOutOfRange(maxDepth);
+            return FailureTypes.Refused(Messages.SiteDepthOutOfRange(maxDepth));
 
         if (seconds is < Limits.FewestSiteSeconds or > Limits.MostSiteSeconds)
-            return Messages.SiteSecondsOutOfRange(seconds);
+            return FailureTypes.Refused(Messages.SiteSecondsOutOfRange(seconds));
 
         return maxCharactersEach is < Limits.FewestCharacters or > Limits.MostCharactersEach
-            ? Messages.CharactersEachOutOfRange(maxCharactersEach)
+            ? FailureTypes.Refused(Messages.CharactersEachOutOfRange(maxCharactersEach))
             : null;
     }
+
+    /// <summary>The type of a walk refused at its start: the kind of the page that refused it, or an unexpected failure when no page says.</summary>
+    private static string TypeOf(CrawlReport report) =>
+        FailureTypes.Of(report.Pages.FirstOrDefault(page => !page.IsSuccess)?.Failure?.Kind ?? FailureKind.Unexpected);
 
     private static string? WhyRefused(CrawlReport report) =>
         report.Pages.FirstOrDefault(page => !page.IsSuccess)?.Failure is { } failure ? Messages.HintFor(failure) : null;

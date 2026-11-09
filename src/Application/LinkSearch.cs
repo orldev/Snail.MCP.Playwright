@@ -17,24 +17,24 @@ public sealed class LinkSearch(IWebSearch search, ServerConfig config)
         var asked = Asked(queries);
 
         if (Refusal(asked, limit) is { } refusal)
-            return Answer.Failed(refusal, Messages.SearchHint);
+            return refusal with { Hint = Messages.SearchHint };
 
         var outcome = await search.FindAsync(asked, TimeSpan.FromSeconds(config.SearchSeconds), cancellationToken);
 
         return outcome.IsAnswered
             ? Answer.Ok<JsonNode>(Described(outcome, limit))
-            : Answer.Failed(Messages.NobodyAnswered, Messages.HintFor(outcome.Attempts), details: Described(outcome, limit));
+            : Answer.Failed(Messages.NobodyAnswered, Messages.HintFor(outcome.Attempts), FailureTypes.Unanswered, Described(outcome, limit));
     }
 
-    private static string? Refusal(IReadOnlyList<string> asked, int limit)
+    private static AnswerFailure? Refusal(IReadOnlyList<string> asked, int limit)
     {
         if (asked.Count is 0 or > Limits.MostQueries)
-            return Messages.QueriesOutOfRange(asked.Count);
+            return FailureTypes.Refused(Messages.QueriesOutOfRange(asked.Count));
 
         if (asked.FirstOrDefault(query => query.Length > Limits.MostQueryCharacters) is { } overlong)
-            return Messages.QueryTooLong(overlong.Length);
+            return FailureTypes.Refused(Messages.QueryTooLong(overlong.Length));
 
-        return limit is < 1 or > Limits.MostResults ? Messages.ResultsOutOfRange(limit) : null;
+        return limit is < 1 or > Limits.MostResults ? FailureTypes.Refused(Messages.ResultsOutOfRange(limit)) : null;
     }
 
     private static IReadOnlyList<string> Asked(IReadOnlyList<string>? queries) =>

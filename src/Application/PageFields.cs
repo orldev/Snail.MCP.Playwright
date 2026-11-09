@@ -17,7 +17,7 @@ public sealed class PageFields(PageReading pages, AddressRules rules, IMarkupSel
         var address = Link.Of(url ?? string.Empty);
 
         if (Refusal(address, fields) is { } refusal)
-            return Answer.Failed(refusal, Messages.FieldHint);
+            return refusal with { Hint = Messages.FieldHint };
 
         var outcome = await pages.PageAsync(address, cancellationToken);
 
@@ -34,7 +34,7 @@ public sealed class PageFields(PageReading pages, AddressRules rules, IMarkupSel
             var taken = Take(page.Html, field, origin);
 
             if (taken.Fault is { } fault)
-                return Answer.Failed(Messages.FieldInvalid(field.Name, taken.Expression!, fault), Messages.ExpressionHint);
+                return FailureTypes.Refused(Messages.FieldInvalid(field.Name, taken.Expression!, fault)) with { Hint = Messages.ExpressionHint };
 
             if (taken.Expression is null)
             {
@@ -79,22 +79,22 @@ public sealed class PageFields(PageReading pages, AddressRules rules, IMarkupSel
         return new Taken(null, [], 0, null);
     }
 
-    private string? Refusal(Link address, IReadOnlyList<Field>? fields)
+    private AnswerFailure? Refusal(Link address, IReadOnlyList<Field>? fields)
     {
         if (rules.Refusal(address) is { } inadmissible)
             return inadmissible;
 
         if (fields is null || fields.Count is < 1 or > Limits.MostFields)
-            return Messages.FieldsOutOfRange(fields?.Count ?? 0);
+            return FailureTypes.Refused(Messages.FieldsOutOfRange(fields?.Count ?? 0));
 
         if (fields.FirstOrDefault(field => string.IsNullOrWhiteSpace(field.Name)) is not null)
-            return Messages.FieldUnnamed;
+            return FailureTypes.Refused(Messages.FieldUnnamed);
 
         if (fields.GroupBy(field => field.Name.Trim(), StringComparer.Ordinal).FirstOrDefault(group => group.Count() > 1) is { } twice)
-            return Messages.FieldTwice(twice.Key);
+            return FailureTypes.Refused(Messages.FieldTwice(twice.Key));
 
         if (fields.FirstOrDefault(field => field.Candidates.Count is < 1 or > Limits.MostCandidates) is { } wrong)
-            return Messages.CandidatesOutOfRange(wrong.Name, wrong.Candidates.Count);
+            return FailureTypes.Refused(Messages.CandidatesOutOfRange(wrong.Name, wrong.Candidates.Count));
 
         return null;
     }

@@ -43,12 +43,11 @@ COPY --from=build /app .
 # needs the browser fails with «Permission denied» starting /app/.playwright/node/…/node.
 RUN chmod +x /app/.playwright/node/*/node
 
-# Every request at Information buries what matters in a container's log; the server's own warnings stay.
+# The MCP SDK and ASP.NET Core write from warnings up by Snail.Sdk's default (UseLevelsFrom, through McpHttpHost): every
+# request at Information would bury what matters in a container's log. The server's own information stays.
 ENV SNAIL_MCP_PLAYWRIGHT_PORT=8822 \
     SNAIL_MCP_PLAYWRIGHT_WEB__SCRAPING__BROWSER_SERVER=ws://browser:3000/ \
-    Logging__LogLevel__Default=Information \
-    Logging__LogLevel__Microsoft.AspNetCore=Warning \
-    Logging__LogLevel__ModelContextProtocol=Warning
+    Logging__LogLevel__Default=Information
 
 EXPOSE 8822
 USER app

@@ -24,7 +24,15 @@ server, `ghcr.io/orldev/ff-juggler`, which runs in a container of its own. The s
 | `playwright_diagnose` | Is the browser behind the server alive? | instant |
 
 Every answer is JSON with an `ok` flag. A failure carries `error`, a `hint` saying what that kind of failure
-calls for, and whatever was learned before it; in the protocol it is flagged `isError`.
+calls for, a `type` a program branches on, and whatever was learned before it; in the protocol it is flagged `isError`.
+
+| `type` | When |
+|---|---|
+| `arguments` | the call cannot be served as written: a number out of range, an address that is not one, a move or an expression that is not valid, `from` beyond the end of the page |
+| `privateAddress` | the address is behind the public web — loopback, a private range, a name with no dot — and is not read |
+| `unanswered` | no search engine answered; each engine's failure is in `data.engines` |
+| `nothingRead` | not one address of `playwright_fetch_many` was read; each one's failure is in `data.failed` |
+| `blocked`, `timeout`, `navigation`, `browserUnavailable`, `proxy`, `robotsDisallowed`, `empty`, `unreadable`, `unexpected` | a page failed, by the toolkit's kind; `data.kind` keeps it as the toolkit spells it (`Blocked`) |
 
 Four things about the answers are deliberate:
 
@@ -37,7 +45,7 @@ Four things about the answers are deliberate:
   site that was rebuilt shows up as fields under `missing` rather than as a record quietly half empty. CSS and
   XPath are named as such, never guessed from the shape of the string.
 - **A refusal is not retried around.** The server spaces its requests to a host, waits as long as a site
-  asks it to, and reports a wall as `Blocked` with the advice to use another source.
+  asks it to, and reports a wall as `blocked` with the advice to use another source.
 
 ## Run it
 

@@ -31,13 +31,15 @@ public static class ServerGuidance
         the text of the page was not enough.
 
         The server is a polite visitor: it spaces its requests to one site, waits as long as a site asks
-        it to and does not go around a refusal. So a failure is an answer, not an obstacle. Read its kind
+        it to and does not go around a refusal. So a failure is an answer, not an obstacle. Read its type
         and its hint, and take another source rather than the same call again.
 
         playwright_diagnose says whether the browser behind the server answers; call it when a tool
-        reports the browser unavailable.
+        reports the type browserUnavailable.
 
-        Every answer is JSON with an ok flag. When ok is false, read error and hint and change the call
-        instead of repeating it.
+        Every answer is JSON with an ok flag, and a failed call is also flagged isError. When ok is false,
+        read error and hint and change the call instead of repeating it; type names the failure: arguments,
+        privateAddress, unanswered, nothingRead, or the kind of a page that failed — blocked, timeout,
+        navigation, browserUnavailable, proxy, robotsDisallowed, empty, unreadable, unexpected.
         """;
 }

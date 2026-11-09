@@ -17,7 +17,7 @@ public sealed class PagePictures(IPageSnapshots snapshots, AddressRules rules)
         var address = Link.Of(url ?? string.Empty);
 
         if (rules.Refusal(address) is { } refusal)
-            return Answer.Failed(refusal);
+            return refusal;
 
         var outcome = await snapshots.TakeAsync(address, wholePage ? SnapshotFrame.WholePage : SnapshotFrame.Screen, cancellationToken);
 
