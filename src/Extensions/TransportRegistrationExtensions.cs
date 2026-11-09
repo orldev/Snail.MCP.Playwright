@@ -4,6 +4,7 @@ using Snail.MCP.Playwright.Application;
 using Snail.MCP.Playwright.Tools;
 using Snail.MCP.Playwright.Tools.Prompts;
 using Snail.Sdk.Mcp.Hosting;
+using Snail.Sdk.Mcp.Hosting.Discovery;
 using Snail.Sdk.Mcp.Hosting.Sessions;
 using Snail.Sdk.Mcp.Http;
 
@@ -45,7 +46,15 @@ public static class TransportRegistrationExtensions
             return services;
         }
 
-        /// <summary>The tools, behind the grant of the address and with every failure answered in the envelope.</summary>
+        /// <summary>
+        /// The tools, behind the grant of the address, with their arguments checked before they run and every
+        /// failure answered in the envelope.
+        /// </summary>
+        /// <remarks>
+        /// Without the check a parameter the tool does not take was dropped without a word — a model writing
+        /// <c>address</c> for <c>url</c> was answered as if it had sent nothing — and a missing one came back as the
+        /// MCP SDK's bare error.
+        /// </remarks>
         private IMcpServerBuilder AddMcpTools() =>
             services
                 .AddMcpServer(server =>
@@ -55,6 +64,7 @@ public static class TransportRegistrationExtensions
                 })
                 .ExplainFailures()
                 .WithSessionGrant()
+                .WithArgumentCheck()
                 .WithTools<SearchTools>()
                 .WithTools<PageTools>()
                 .WithTools<CloserTools>()

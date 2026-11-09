@@ -74,6 +74,34 @@ public sealed class HttpContractTests
         Assert.Equal(GrantOptions.NotGranted, refused.Type());
     }
 
+    /// <summary>A parameter the tool does not take is refused before it runs and named, rather than dropped.</summary>
+    [Fact]
+    public async Task Call_WithAParameterTheToolDoesNotTake_IsRefusedAndPointsAtTheOneItMeant()
+    {
+        await using var server = await ListeningServer.StartAsync();
+        await using var client = await server.ConnectAsync();
+
+        var refused = await client.CallToolAsync("playwright_fetch", new Dictionary<string, object?> { ["url"] = "https://example.com/", ["maxCharacter"] = 1000 });
+
+        Assert.Equal(true, refused.IsError);
+        Assert.Equal(ToolFailures.Arguments, refused.Type());
+        Assert.Contains("maxCharacters", refused.Text(), StringComparison.Ordinal);
+    }
+
+    /// <summary>A required parameter left out is refused in the envelope, not with the MCP SDK's bare error.</summary>
+    [Fact]
+    public async Task Call_LeavingOutARequiredParameter_IsRefusedAsArguments()
+    {
+        await using var server = await ListeningServer.StartAsync();
+        await using var client = await server.ConnectAsync();
+
+        var refused = await client.CallToolAsync("playwright_fetch", new Dictionary<string, object?>());
+
+        Assert.Equal(true, refused.IsError);
+        Assert.Equal(ToolFailures.Arguments, refused.Type());
+        Assert.Contains("url", refused.Text(), StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Call_FromASessionNamingNoTool_MayUseThemAll()
     {
