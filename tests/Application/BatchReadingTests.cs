@@ -1,6 +1,7 @@
 using Snail.MCP.Playwright.Application;
 using Snail.MCP.Playwright.Configuration;
 using Snail.MCP.Playwright.Domain;
+using Snail.MCP.Playwright.Tools;
 using Snail.Toolkit.Web.Scraping;
 
 namespace Snail.MCP.Playwright.Tests.Application;
@@ -20,9 +21,9 @@ public sealed class BatchReadingTests
 
         var answer = await Batch(reader).ReadAsync(["https://b.example/", "https://a.example/"], Limits.DefaultCharactersEach);
 
-        Assert.True(answer.IsSuccess);
-        Assert.Equal(["second page", "first page"], [.. answer.Value!["pages"]!.AsArray().Select(page => page!["text"]!.GetValue<string>())]);
-        Assert.Empty(answer.Value["failed"]!.AsArray());
+        Assert.True(answer.TryGet(out var read));
+        Assert.Equal(["second page", "first page"], [.. read.Pages.Select(page => page.Text)]);
+        Assert.Empty(read.Unread);
     }
 
     /// <summary>One unreachable site must not cost the caller the pages that answered.</summary>
@@ -33,12 +34,12 @@ public sealed class BatchReadingTests
 
         var answer = await Batch(reader).ReadAsync(["https://a.example/", "https://b.example/"], Limits.DefaultCharactersEach);
 
-        var failed = answer.Value!["failed"]![0]!;
+        Assert.True(answer.TryGet(out var read));
+        var failed = Assert.Single(read.Unread);
 
-        Assert.True(answer.IsSuccess);
-        Assert.Equal(1, answer.Value["read"]!.GetValue<int>());
-        Assert.Equal("RobotsDisallowed", failed["kind"]!.GetValue<string>());
-        Assert.Contains("robots.txt", failed["hint"]!.GetValue<string>(), StringComparison.Ordinal);
+        Assert.Single(read.Pages);
+        Assert.Equal(FailureKind.RobotsDisallowed, failed.Failure?.Kind);
+        Assert.Contains("robots.txt", AnswerFields.Of(failed)["hint"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -50,7 +51,8 @@ public sealed class BatchReadingTests
 
         Assert.False(answer.IsSuccess);
         Assert.Contains("none of the 2 pages", answer.Error, StringComparison.Ordinal);
-        Assert.Equal(["Blocked", "Timeout"], [.. answer.Details!["failed"]!.AsArray().Select(page => page!["kind"]!.GetValue<string>())]);
+        Assert.True(answer.TryGetDetails<PagesRead>(out var read));
+        Assert.Equal([FailureKind.Blocked, FailureKind.Timeout], [.. read.Unread.Select(page => page.Failure?.Kind)]);
     }
 
     [Fact]
@@ -60,8 +62,9 @@ public sealed class BatchReadingTests
 
         var answer = await Batch(reader).ReadAsync(["https://a.example/", "http://minio:9000/"], Limits.DefaultCharactersEach);
 
+        Assert.True(answer.TryGet(out var read));
         Assert.Single(reader.Visited);
-        Assert.Contains("not on the public web", answer.Value!["failed"]![0]!["error"]!.GetValue<string>(), StringComparison.Ordinal);
+        Assert.Contains("not on the public web", Assert.Single(read.Unread).Error, StringComparison.Ordinal);
     }
 
     /// <summary>A page cut short here is read on with playwright_fetch, and that must not be a second visit.</summary>
@@ -71,10 +74,12 @@ public sealed class BatchReadingTests
         var reader = new FakeReader().Serving("https://a.example/", new string('a', 900));
         var batch = Batch(reader);
 
-        var answer = await batch.ReadAsync(["https://a.example/"], 500);
-        var rest = await new PageReading(reader, new AddressRules(Config), _memory).ReadAsync("https://a.example/", answer.Value!["pages"]![0]!["next"]!.GetValue<int>(), 500);
+        Assert.True((await batch.ReadAsync(["https://a.example/"], 500)).TryGet(out var read));
+        var cut = Assert.Single(read.Pages);
+        var rest = await new PageReading(reader, new AddressRules(Config), _memory).ReadAsync("https://a.example/", Assert.NotNull(cut.Next), 500);
 
-        Assert.Equal(400, rest.Value!["text"]!.GetValue<string>().Length);
+        Assert.True(rest.TryGet(out var piece));
+        Assert.Equal(400, piece.Text.Length);
         Assert.Single(reader.Visited);
     }
 
@@ -85,8 +90,9 @@ public sealed class BatchReadingTests
 
         var answer = await Batch(reader).ReadAsync(["https://a.example/page", "https://a.example/page#section"], Limits.DefaultCharactersEach);
 
+        Assert.True(answer.TryGet(out var read));
         Assert.Single(reader.Visited);
-        Assert.Equal(1, answer.Value!["asked"]!.GetValue<int>());
+        Assert.Equal(1, read.Asked);
     }
 
     [Theory]

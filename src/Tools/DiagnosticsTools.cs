@@ -14,5 +14,5 @@ public sealed class DiagnosticsTools(Health health)
     [McpServerTool(Name = "playwright_diagnose", ReadOnly = true, OpenWorld = false)]
     [Description(ToolDescriptions.Diagnose)]
     public async Task<CallToolResult> DiagnoseAsync(CancellationToken cancellationToken = default) =>
-        ToolAnswer.From(await health.ReportAsync(cancellationToken), AnswerShape.None);
+        ToolAnswer.From(await health.ReportAsync(cancellationToken), AnswerFields.Of, AnswerShape.None);
 }

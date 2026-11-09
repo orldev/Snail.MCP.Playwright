@@ -21,7 +21,7 @@ public sealed class CloserTools(PageExtraction extraction, PageFields records, P
         [Description(ToolDescriptions.ExtractAttribute)] string? attribute = null,
         [Description(ToolDescriptions.ExtractLimit)] int limit = Limits.DefaultSelected,
         CancellationToken cancellationToken = default) =>
-        ToolAnswer.From(await extraction.SelectAsync(url, xpath, css, attribute, limit, cancellationToken), AnswerShape.None);
+        ToolAnswer.From<PiecesSelected, PageFailure>(await extraction.SelectAsync(url, xpath, css, attribute, limit, cancellationToken), AnswerFields.Of, AnswerFields.Of, AnswerShape.None);
 
     /// <summary>Returns a record of named values from a page, and the selector that found each.</summary>
     [McpServerTool(Name = "playwright_extract_fields", ReadOnly = true, OpenWorld = true)]
@@ -30,7 +30,7 @@ public sealed class CloserTools(PageExtraction extraction, PageFields records, P
         [Description(ToolDescriptions.ExtractFieldsUrl)] string url,
         [Description(ToolDescriptions.ExtractFieldsFields)] Field[] fields,
         CancellationToken cancellationToken = default) =>
-        ToolAnswer.From(await records.TakeAsync(url, fields, cancellationToken), AnswerShape.None);
+        ToolAnswer.From<FieldsTaken, PageFailure>(await records.TakeAsync(url, fields, cancellationToken), AnswerFields.Of, AnswerFields.Of, AnswerShape.None);
 
     /// <summary>Returns a picture of a page: the words first, the image after them.</summary>
     /// <remarks>
@@ -46,10 +46,10 @@ public sealed class CloserTools(PageExtraction extraction, PageFields records, P
         CancellationToken cancellationToken = default)
     {
         var taken = await pictures.TakeAsync(url, wholePage, cancellationToken);
-        var answered = ToolAnswer.From(taken.Map<JsonNode>(picture => PagePictures.Described(picture, wholePage)), AnswerShape.None);
+        var answered = ToolAnswer.From<PagePicture, PageFailure>(taken, AnswerFields.Of, AnswerFields.Of, AnswerShape.None);
 
-        return taken.TryGet(out var snapshot)
-            ? answered.WithImage(snapshot.Image, PageSnapshot.MediaType)
+        return taken.TryGet(out var picture)
+            ? answered.WithImage(picture.Snapshot.Image, PageSnapshot.MediaType)
             : answered;
     }
 
@@ -65,5 +65,5 @@ public sealed class CloserTools(PageExtraction extraction, PageFields records, P
         [Description(ToolDescriptions.PerformMoves)] Move[] moves,
         [Description(ToolDescriptions.PerformCharacters)] int maxCharacters = Limits.DefaultCharacters,
         CancellationToken cancellationToken = default) =>
-        ToolAnswer.From(await walking.PerformAsync(url, moves, maxCharacters, cancellationToken), AnswerShape.None);
+        ToolAnswer.From<PageWalked, WalkStopped>(await walking.PerformAsync(url, moves, maxCharacters, cancellationToken), AnswerFields.Of, AnswerFields.Of, AnswerShape.None);
 }

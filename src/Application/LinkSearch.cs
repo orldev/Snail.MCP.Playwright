@@ -12,7 +12,7 @@ namespace Snail.MCP.Playwright.Application;
 public sealed class LinkSearch(IWebSearch search, ServerConfig config)
 {
     /// <summary>The links the engines offer for these queries, and what every engine did to find them.</summary>
-    public async Task<Answer<JsonNode>> FindAsync(IReadOnlyList<string>? queries, int limit, CancellationToken cancellationToken = default)
+    public async Task<Answer<LinksFound>> FindAsync(IReadOnlyList<string>? queries, int limit, CancellationToken cancellationToken = default)
     {
         var asked = Asked(queries);
 
@@ -20,10 +20,11 @@ public sealed class LinkSearch(IWebSearch search, ServerConfig config)
             return refusal with { Hint = Messages.SearchHint };
 
         var outcome = await search.FindAsync(asked, TimeSpan.FromSeconds(config.SearchSeconds), cancellationToken);
+        var found = new LinksFound([.. outcome.Results.Take(limit)], outcome.Results.Count, outcome.IsAnswered && !outcome.HasResults, outcome.Attempts);
 
         return outcome.IsAnswered
-            ? Answer.Ok<JsonNode>(Described(outcome, limit))
-            : Answer.Failed(Messages.NobodyAnswered, Messages.HintFor(outcome.Attempts), FailureTypes.Unanswered, Described(outcome, limit));
+            ? Answer.Ok(found)
+            : Answer.Failed(Messages.NobodyAnswered, Messages.HintFor(outcome.Attempts), FailureTypes.Unanswered).WithDetails(found);
     }
 
     private static AnswerFailure? Refusal(IReadOnlyList<string> asked, int limit)
@@ -39,34 +40,4 @@ public sealed class LinkSearch(IWebSearch search, ServerConfig config)
 
     private static IReadOnlyList<string> Asked(IReadOnlyList<string>? queries) =>
         [.. (queries ?? []).Where(query => !string.IsNullOrWhiteSpace(query)).Select(query => query.Trim()).Distinct(StringComparer.Ordinal)];
-
-    private static JsonObject Described(SearchOutcome outcome, int limit) => new()
-    {
-        ["results"] = new JsonArray([.. outcome.Results.Take(limit).Select(Described)]),
-        ["found"] = outcome.Results.Count,
-        ["note"] = outcome.IsAnswered && !outcome.HasResults ? Messages.NothingMatched : null,
-        ["engines"] = new JsonArray([.. outcome.Attempts.Select(Described)])
-    };
-
-    private static JsonNode Described(SearchResult result) => new JsonObject
-    {
-        ["title"] = result.Title,
-        ["url"] = result.Address.Text,
-        ["snippet"] = Shortened(result.Snippet),
-        ["engine"] = result.Provider
-    };
-
-    private static JsonNode Described(SearchAttempt attempt) => new JsonObject
-    {
-        ["engine"] = attempt.Provider,
-        ["query"] = attempt.Query,
-        ["results"] = attempt.Results.Count,
-        ["milliseconds"] = (long)attempt.Duration.TotalMilliseconds,
-        ["failure"] = attempt.Failure?.Kind.ToString(),
-        ["message"] = attempt.Failure?.Message,
-        ["opensAt"] = attempt.Failure?.OpensAt?.ToString("O")
-    };
-
-    private static string Shortened(string snippet) =>
-        snippet.Length <= Limits.SnippetCharacters ? snippet : $"{snippet[..Limits.SnippetCharacters].TrimEnd()}…";
 }

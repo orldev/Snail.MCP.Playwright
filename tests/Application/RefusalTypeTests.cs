@@ -35,7 +35,8 @@ public sealed class RefusalTypeTests
         var answer = await Reading(new FakeReader().Refusing(Page, kind)).ReadAsync(Page, 0, Limits.DefaultCharacters);
 
         Assert.Equal(type, answer.Type);
-        Assert.Equal(kind.ToString(), answer.Details!["kind"]!.GetValue<string>());
+        Assert.True(answer.TryGetDetails<PageFailure>(out var failure));
+        Assert.Equal(kind.ToString(), AnswerFields.Of(failure)["kind"]!.GetValue<string>());
     }
 
     [Fact]
@@ -82,7 +83,9 @@ public sealed class RefusalTypeTests
         var noFields = await fields.TakeAsync(Page, []);
         var walk = await new PageWalking(new FakeAgent(), Rules).PerformAsync(Page, [], Limits.DefaultCharacters);
 
-        Assert.All([piece, beyond, batch, site, search, unnamed, invalid, noFields, walk], answer => Assert.Equal(ToolFailures.Arguments, answer.Type));
+        Assert.All(
+            [piece.Type, beyond.Type, batch.Type, site.Type, search.Type, unnamed.Type, invalid.Type, noFields.Type, walk.Type],
+            type => Assert.Equal(ToolFailures.Arguments, type));
     }
 
     [Fact]
@@ -129,7 +132,8 @@ public sealed class RefusalTypeTests
         var answer = await new PageWalking(new FakeAgent(failed), Rules).PerformAsync(Page, moves, Limits.DefaultCharacters);
 
         Assert.Equal("timeout", answer.Type);
-        Assert.Equal("Timeout", answer.Details!["kind"]!.GetValue<string>());
+        Assert.True(answer.TryGetDetails<WalkStopped>(out var stopped));
+        Assert.Equal("Timeout", AnswerFields.Of(stopped)["kind"]!.GetValue<string>());
     }
 
     /// <summary>A type the instructions do not name is one a model meets without being told what it means.</summary>

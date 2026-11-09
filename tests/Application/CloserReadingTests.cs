@@ -2,6 +2,7 @@ using Snail.MCP.Playwright.Adapters;
 using Snail.MCP.Playwright.Application;
 using Snail.MCP.Playwright.Configuration;
 using Snail.MCP.Playwright.Domain;
+using Snail.MCP.Playwright.Tools;
 using Snail.Toolkit.Web;
 using Snail.Toolkit.Web.Scraping;
 using Snail.Toolkit.Web.Scraping.Agent;
@@ -37,9 +38,9 @@ public sealed class CloserReadingTests
 
         var answer = await extraction.SelectAsync(Page, "//tr", null, null, Limits.DefaultSelected);
 
-        Assert.True(answer.IsSuccess);
-        Assert.Equal("Wheat 210", answer.Value!["pieces"]![0]!.GetValue<string>());
-        Assert.Equal(1, answer.Value["matched"]!.GetValue<int>());
+        Assert.True(answer.TryGet(out var selected));
+        Assert.Equal(["Wheat 210"], selected.Selected.Pieces);
+        Assert.Equal(1, selected.Selected.Matched);
     }
 
     /// <summary>A caller reads a page, sees a table in its text and asks for the rows: that is one visit, not two.</summary>
@@ -62,8 +63,8 @@ public sealed class CloserReadingTests
 
         var answer = await extraction.SelectAsync(Page, "//article", null, null, Limits.DefaultSelected);
 
-        Assert.True(answer.IsSuccess);
-        Assert.Contains("matched nothing", answer.Value!["note"]!.GetValue<string>(), StringComparison.Ordinal);
+        Assert.True(answer.TryGet(out var selected));
+        Assert.Contains("matched nothing", AnswerFields.Of(selected)["note"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
     [Theory]
@@ -89,7 +90,8 @@ public sealed class CloserReadingTests
 
         var answer = await extraction.SelectAsync(Page, null, "td", null, Limits.DefaultSelected);
 
-        Assert.Equal(["Wheat", "210"], answer.Value!["pieces"]!.AsArray().Select(piece => piece!.GetValue<string>()));
+        Assert.True(answer.TryGet(out var selected));
+        Assert.Equal(["Wheat", "210"], selected.Selected.Pieces);
     }
 
     /// <summary>Which language an expression is in is said, never guessed: both at once is a question with two answers.</summary>
@@ -114,9 +116,12 @@ public sealed class CloserReadingTests
 
         var answer = await fields.TakeAsync(Page, [new Field("price", Css: ["td.price", "tr td:nth-child(2)"])]);
 
-        Assert.Equal("210", answer.Value!["fields"]!["price"]!.GetValue<string>());
-        Assert.Equal("tr td:nth-child(2)", answer.Value["found"]![0]!["css"]!.GetValue<string>());
-        Assert.Null(answer.Value["missing"]);
+        Assert.True(answer.TryGet(out var taken));
+        var record = AnswerFields.Of(taken);
+
+        Assert.Equal("210", record["fields"]!["price"]!.GetValue<string>());
+        Assert.Equal("tr td:nth-child(2)", record["found"]![0]!["css"]!.GetValue<string>());
+        Assert.Null(record["missing"]);
     }
 
     [Fact]
@@ -126,9 +131,12 @@ public sealed class CloserReadingTests
 
         var answer = await fields.TakeAsync(Page, [new Field("grain", Css: ["td:first-child"]), new Field("stock", Css: [".stock"], XPath: ["//span[@class='stock']"])]);
 
-        Assert.Equal("Wheat", answer.Value!["fields"]!["grain"]!.GetValue<string>());
-        Assert.Equal(["stock"], answer.Value["missing"]!.AsArray().Select(name => name!.GetValue<string>()));
-        Assert.Contains("rebuilt", answer.Value["note"]!.GetValue<string>(), StringComparison.Ordinal);
+        Assert.True(answer.TryGet(out var taken));
+        var record = AnswerFields.Of(taken);
+
+        Assert.Equal("Wheat", record["fields"]!["grain"]!.GetValue<string>());
+        Assert.Equal(["stock"], [.. taken.Fields.Where(field => !field.IsFound).Select(field => field.Name)]);
+        Assert.Contains("rebuilt", record["note"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -138,7 +146,8 @@ public sealed class CloserReadingTests
 
         var answer = await fields.TakeAsync(Page, [new Field("cells", XPath: ["//td"], IsEveryMatchWanted: true)]);
 
-        Assert.Equal(["Wheat", "210"], answer.Value!["fields"]!["cells"]!.AsArray().Select(cell => cell!.GetValue<string>()));
+        Assert.True(answer.TryGet(out var taken));
+        Assert.Equal(["Wheat", "210"], AnswerFields.Of(taken)["fields"]!["cells"]!.AsArray().Select(cell => cell!.GetValue<string>()));
     }
 
     [Fact]
@@ -169,9 +178,9 @@ public sealed class CloserReadingTests
 
         var taken = await new PagePictures(snapshots, Rules).TakeAsync(Page, wholePage: false);
 
-        Assert.True(taken.IsSuccess);
-        Assert.Equal(FakeSnapshots.Jpeg, taken.Value!.Image.ToArray());
-        Assert.Equal(1280, PagePictures.Described(taken.Value, wholePage: false)["width"]!.GetValue<int>());
+        Assert.True(taken.TryGet(out var picture));
+        Assert.Equal(FakeSnapshots.Jpeg, picture.Snapshot.Image.ToArray());
+        Assert.Equal(1280, AnswerFields.Of(picture)["width"]!.GetValue<int>());
         Assert.Equal(SnapshotFrame.Screen, snapshots.Framed);
     }
 
@@ -179,8 +188,8 @@ public sealed class CloserReadingTests
     [Fact]
     public async Task Screenshot_OfAScreenWithMorePageBelowIt_SaysHowToSeeTheRest()
     {
-        var taken = await new PagePictures(new FakeSnapshots(), Rules).TakeAsync(Page, wholePage: false);
-        var described = PagePictures.Described(taken.Value!, wholePage: false);
+        Assert.True((await new PagePictures(new FakeSnapshots(), Rules).TakeAsync(Page, wholePage: false)).TryGet(out var picture));
+        var described = AnswerFields.Of(picture);
 
         Assert.True(described["isCut"]!.GetValue<bool>());
         Assert.Contains("whole page", described["note"]!.GetValue<string>(), StringComparison.Ordinal);
@@ -203,9 +212,9 @@ public sealed class CloserReadingTests
 
         var taken = await new PagePictures(new FakeSnapshots(refused), Rules).TakeAsync(Page, wholePage: false);
 
-        Assert.False(taken.IsSuccess);
-        Assert.Null(taken.Value);
-        Assert.Equal("Blocked", taken.Details!["kind"]!.GetValue<string>());
+        Assert.False(taken.TryGet(out _));
+        Assert.True(taken.TryGetDetails<PageFailure>(out var failure));
+        Assert.Equal(FailureKind.Blocked, failure.Kind);
     }
 
     [Fact]
@@ -255,9 +264,12 @@ public sealed class CloserReadingTests
 
         var answer = await new PageWalking(agent, Rules).PerformAsync(Page, [new Move("click", Css: "#go")], 500);
 
-        Assert.Equal(500, answer.Value!["text"]!.GetValue<string>().Length);
-        Assert.True(answer.Value["isCut"]!.GetValue<bool>());
-        Assert.Null(answer.Value["next"]);
+        Assert.True(answer.TryGet(out var walked));
+        var described = AnswerFields.Of(walked);
+
+        Assert.Equal(500, walked.Text.Length);
+        Assert.True(described["isCut"]!.GetValue<bool>());
+        Assert.False(described.ContainsKey("next"));
     }
 
     /// <summary>The toolkit describes the page a move failed on, and the next attempt is written from that description.</summary>

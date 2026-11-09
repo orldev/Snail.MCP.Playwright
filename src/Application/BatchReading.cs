@@ -12,7 +12,7 @@ namespace Snail.MCP.Playwright.Application;
 public sealed class BatchReading(ICrawler crawler, AddressRules rules, PageMemory memory)
 {
     /// <summary>A piece of every page that answered, and the reason for every one that did not.</summary>
-    public async Task<Answer<JsonNode>> ReadAsync(IReadOnlyList<string>? urls, int maxCharactersEach, CancellationToken cancellationToken = default)
+    public async Task<Answer<PagesRead>> ReadAsync(IReadOnlyList<string>? urls, int maxCharactersEach, CancellationToken cancellationToken = default)
     {
         var asked = Asked(urls);
 
@@ -20,11 +20,11 @@ public sealed class BatchReading(ICrawler crawler, AddressRules rules, PageMemor
             return refusal;
 
         var read = await ReadAsync([.. asked.Where(address => rules.Refusal(address) is null)], cancellationToken);
-        var answered = Described(asked, read, maxCharactersEach);
+        var answered = Sorted(asked, read, maxCharactersEach);
 
         return read.Values.Any(outcome => outcome.IsSuccess)
-            ? Answer.Ok<JsonNode>(answered)
-            : Answer.Failed(Messages.NothingRead(asked.Count), Messages.NothingReadHint, FailureTypes.NothingRead, answered);
+            ? Answer.Ok(answered)
+            : Answer.Failed(Messages.NothingRead(asked.Count), Messages.NothingReadHint, FailureTypes.NothingRead).WithDetails(answered);
     }
 
     private async Task<Dictionary<Link, Outcome<PageContent, PageFailure>>> ReadAsync(IReadOnlyList<Link> admitted, CancellationToken cancellationToken)
@@ -46,30 +46,24 @@ public sealed class BatchReading(ICrawler crawler, AddressRules rules, PageMemor
         return read;
     }
 
-    private JsonObject Described(IReadOnlyList<Link> asked, Dictionary<Link, Outcome<PageContent, PageFailure>> read, int maxCharactersEach)
+    private PagesRead Sorted(IReadOnlyList<Link> asked, Dictionary<Link, Outcome<PageContent, PageFailure>> read, int maxCharactersEach)
     {
-        var pages = new JsonArray();
-        var failed = new JsonArray();
+        List<PagePiece> pages = [];
+        List<UnreadPage> unread = [];
 
         foreach (var address in asked)
         {
             if (read.TryGetValue(address, out var outcome) && outcome.TryGetValue(out var page))
-                pages.Add(Piece.Described(page, 0, maxCharactersEach));
+                pages.Add(Piece.Taken(page, 0, maxCharactersEach));
             else
-                failed.Add(Failed(address, outcome?.Failure));
+                unread.Add(Unread(address, outcome?.Failure));
         }
 
-        return new JsonObject { ["asked"] = asked.Count, ["read"] = pages.Count, ["pages"] = pages, ["failed"] = failed };
+        return new PagesRead(asked.Count, pages, unread);
     }
 
-    private JsonObject Failed(Link address, PageFailure? failure) => new()
-    {
-        ["url"] = address.Text,
-        ["kind"] = failure?.Kind.ToString(),
-        ["status"] = failure?.StatusCode,
-        ["error"] = failure is null ? rules.Refusal(address)?.Error ?? Messages.NoAnswer : Messages.Said(failure),
-        ["hint"] = failure is null ? null : Messages.HintFor(failure)
-    };
+    private UnreadPage Unread(Link address, PageFailure? failure) =>
+        new(address, failure, failure is null ? rules.Refusal(address)?.Error ?? Messages.NoAnswer : Messages.Said(failure));
 
     private static AnswerFailure? Refusal(IReadOnlyList<Link> asked, int maxCharactersEach)
     {

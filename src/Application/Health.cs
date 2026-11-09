@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Options;
 using Snail.MCP.Playwright.Configuration;
-using Snail.MCP.Playwright.Tools.Prompts;
 using Snail.Sdk.Mcp.Hosting;
 using Snail.Toolkit.Web.Scraping;
 using Snail.Toolkit.Web.Scraping.Browsers;
@@ -25,21 +24,13 @@ public sealed class Health(
     private TimeSpan Patience => TimeSpan.FromSeconds(config.BrowserProbeSeconds);
 
     /// <summary>The state of the server, of the browser behind it and of the search it offers.</summary>
-    public async Task<Answer<JsonNode>> ReportAsync(CancellationToken cancellationToken = default) =>
-        Answer.Ok<JsonNode>(new JsonObject
-        {
-            ["server"] = new JsonObject
-            {
-                ["name"] = ServerIdentity.NameOf(typeof(Health).Assembly),
-                ["version"] = ServerIdentity.VersionOf(typeof(Health).Assembly),
-                ["transport"] = ToolAnswer.Word(endpoint.Transport)
-            },
-            ["browser"] = await BrowserAsync(cancellationToken),
-            ["search"] = new JsonObject
-            {
-                ["engines"] = new JsonArray([.. engines.Select(engine => (JsonNode)engine.Name)])
-            }
-        });
+    public async Task<Answer<HealthReport>> ReportAsync(CancellationToken cancellationToken = default) =>
+        Answer.Ok(new HealthReport(
+            ServerIdentity.NameOf(typeof(Health).Assembly),
+            ServerIdentity.VersionOf(typeof(Health).Assembly),
+            endpoint.Transport,
+            await BrowserAsync(cancellationToken),
+            [.. engines.Select(engine => engine.Name)]));
 
     /// <summary>Whether the browser answers, asked the cheap way: a knock at the browser server's address, no browser rented.</summary>
     /// <remarks>
@@ -50,12 +41,12 @@ public sealed class Health(
     public async Task<bool> IsBrowserReachableAsync(CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(scraping.Value.BrowserServer))
-            return (await BrowserAsync(cancellationToken))["isReachable"]!.GetValue<bool>();
+            return (await BrowserAsync(cancellationToken)).IsReachable;
 
         return await door.IsAnsweringAsync(Patience, cancellationToken);
     }
 
-    private async Task<JsonObject> BrowserAsync(CancellationToken cancellationToken)
+    private async Task<BrowserState> BrowserAsync(CancellationToken cancellationToken)
     {
         long asked = clock.GetTimestamp();
 
@@ -66,24 +57,16 @@ public sealed class Health(
         {
             await using var lease = await browsers.RentAsync(patience.Token);
 
-            return Described(lease.Browser.Version, null, clock.GetElapsedTime(asked));
+            return Stated(lease.Browser.Version, null, clock.GetElapsedTime(asked));
         }
         catch (Exception refused) when (IsAnAnswer(refused, cancellationToken))
         {
-            return Described(null, refused.Message, clock.GetElapsedTime(asked));
+            return Stated(null, refused.Message, clock.GetElapsedTime(asked));
         }
     }
 
-    private JsonObject Described(string? version, string? error, TimeSpan took) => new()
-    {
-        ["server"] = scraping.Value.BrowserServer,
-        ["engine"] = scraping.Value.Engine.ToString(),
-        ["isReachable"] = error is null,
-        ["version"] = version,
-        ["milliseconds"] = (long)took.TotalMilliseconds,
-        ["error"] = error,
-        ["hint"] = error is null ? null : Messages.BrowserUnreachable(scraping.Value.BrowserServer)
-    };
+    private BrowserState Stated(string? version, string? error, TimeSpan took) =>
+        new(scraping.Value.BrowserServer, scraping.Value.Engine.ToString(), version, error, took);
 
     /// <summary>Whether a failure to reach the browser is itself the report, as everything but the caller's own cancellation is.</summary>
     /// <remarks>

@@ -12,7 +12,7 @@ namespace Snail.MCP.Playwright.Application;
 public sealed class PageFields(PageReading pages, AddressRules rules, IMarkupSelection selection)
 {
     /// <summary>The values of the fields in the page, and how each was found.</summary>
-    public async Task<Answer<JsonNode>> TakeAsync(string url, IReadOnlyList<Field>? fields, CancellationToken cancellationToken = default)
+    public async Task<Answer<FieldsTaken>> TakeAsync(string url, IReadOnlyList<Field>? fields, CancellationToken cancellationToken = default)
     {
         var address = Link.Of(url ?? string.Empty);
 
@@ -22,45 +22,22 @@ public sealed class PageFields(PageReading pages, AddressRules rules, IMarkupSel
         var outcome = await pages.PageAsync(address, cancellationToken);
 
         if (!outcome.TryGetValue(out var page))
-            return PageReading.Refused(outcome.Failure!);
+            return PageReading.Refused(outcome.Failure);
 
         Uri origin = page.Final.Address ?? address.Address!;
-        var values = new JsonObject();
-        var found = new JsonArray();
-        List<string> missing = [];
+        List<FieldTaken> taken = [];
 
         foreach (var field in fields!)
         {
-            var taken = Take(page.Html, field, origin);
+            var tried = Take(page.Html, field, origin);
 
-            if (taken.Fault is { } fault)
-                return FailureTypes.Refused(Messages.FieldInvalid(field.Name, taken.Expression!, fault)) with { Hint = Messages.ExpressionHint };
+            if (tried.Fault is { } fault)
+                return FailureTypes.Refused(Messages.FieldInvalid(field.Name, tried.Expression!, fault)) with { Hint = Messages.ExpressionHint };
 
-            if (taken.Expression is null)
-            {
-                missing.Add(field.Name);
-                values[field.Name] = null;
-                continue;
-            }
-
-            values[field.Name] = field.IsEveryMatchWanted ? new JsonArray([.. taken.Pieces.Select(piece => (JsonNode)piece)]) : taken.Pieces[0];
-            found.Add(new JsonObject
-            {
-                ["name"] = field.Name,
-                [taken.Expression.Kind == ExpressionKind.Css ? "css" : "xpath"] = taken.Expression.Text,
-                ["matched"] = taken.Matched
-            });
+            taken.Add(new FieldTaken(field.Name, tried.Expression, tried.Pieces, tried.Matched, field.IsEveryMatchWanted));
         }
 
-        return Answer.Ok<JsonNode>(new JsonObject
-        {
-            ["url"] = page.Final.Text,
-            ["title"] = page.Title,
-            ["fields"] = values,
-            ["found"] = found,
-            ["missing"] = missing.Count == 0 ? null : new JsonArray([.. missing.Select(name => (JsonNode)name)]),
-            ["note"] = missing.Count == 0 ? null : Messages.FieldsMissing(missing.Count, fields!.Count)
-        });
+        return Answer.Ok(new FieldsTaken(page, taken));
     }
 
     private Taken Take(string html, Field field, Uri origin)

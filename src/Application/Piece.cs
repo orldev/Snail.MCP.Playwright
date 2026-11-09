@@ -12,29 +12,19 @@ namespace Snail.MCP.Playwright.Application;
 public static class Piece
 {
     /// <summary>The piece of <paramref name="page"/> that starts at <paramref name="from"/>, or why there is none.</summary>
-    public static Answer<JsonNode> Of(PageContent page, int from, int maxCharacters) =>
+    public static Answer<PagePiece> Of(PageContent page, int from, int maxCharacters) =>
         from > 0 && from >= page.Text.Length
             ? FailureTypes.Refused(Messages.FromBeyondTheEnd(from, page.Text.Length))
-            : Answer.Ok<JsonNode>(Described(page, from, maxCharacters));
+            : Answer.Ok(Taken(page, from, maxCharacters));
 
-    /// <summary>The piece as a caller reads it: where the page is, how much of it this is, and the text.</summary>
-    public static JsonObject Described(PageContent page, int from, int maxCharacters)
+    /// <summary>The piece of <paramref name="page"/> from <paramref name="from"/> on, and where the next one starts.</summary>
+    public static PagePiece Taken(PageContent page, int from, int maxCharacters)
     {
         int start = Whole(page.Text, from);
         string text = Cut(page.Text, start, maxCharacters);
         int next = start + text.Length;
 
-        return new JsonObject
-        {
-            ["url"] = page.Final.Text,
-            ["requested"] = page.IsRedirected ? page.Requested.Text : null,
-            ["title"] = page.Title,
-            ["status"] = page.StatusCode,
-            ["fetchedAt"] = page.FetchedAt.ToString("O"),
-            ["characters"] = new JsonObject { ["from"] = start, ["returned"] = text.Length, ["total"] = page.Text.Length },
-            ["next"] = next < page.Text.Length ? next : null,
-            ["text"] = text
-        };
+        return new PagePiece(page, start, text, next < page.Text.Length ? next : null);
     }
 
     /// <summary>The characters of <paramref name="text"/> from <paramref name="from"/>, never ending between the halves of one character.</summary>

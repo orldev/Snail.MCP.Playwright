@@ -3,6 +3,7 @@ using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Snail.MCP.Playwright.Application;
 using Snail.MCP.Playwright.Tools.Prompts;
+using Snail.Toolkit.Web.Scraping;
 
 namespace Snail.MCP.Playwright.Tools;
 
@@ -24,7 +25,7 @@ public sealed class PageTools(PageReading pages, BatchReading batches, SiteReadi
         [Description(ToolDescriptions.FetchFrom)] int from = 0,
         [Description(ToolDescriptions.FetchCharacters)] int maxCharacters = Limits.DefaultCharacters,
         CancellationToken cancellationToken = default) =>
-        ToolAnswer.From(await pages.ReadAsync(url, from, maxCharacters, cancellationToken), AnswerShape.None);
+        ToolAnswer.From<PagePiece, PageFailure>(await pages.ReadAsync(url, from, maxCharacters, cancellationToken), AnswerFields.Of, AnswerFields.Of, AnswerShape.None);
 
     /// <summary>Reads several pages and returns a piece of each.</summary>
     [McpServerTool(Name = "playwright_fetch_many", ReadOnly = true, OpenWorld = true)]
@@ -33,7 +34,7 @@ public sealed class PageTools(PageReading pages, BatchReading batches, SiteReadi
         [Description(ToolDescriptions.FetchManyUrls)] string[] urls,
         [Description(ToolDescriptions.FetchManyCharacters)] int maxCharactersEach = Limits.DefaultCharactersEach,
         CancellationToken cancellationToken = default) =>
-        ToolAnswer.From(await batches.ReadAsync(urls, maxCharactersEach, cancellationToken), AnswerShape.None);
+        ToolAnswer.From<PagesRead, PagesRead>(await batches.ReadAsync(urls, maxCharactersEach, cancellationToken), AnswerFields.Of, AnswerFields.Of, AnswerShape.None);
 
     /// <summary>Walks a site and returns a piece of every page it read.</summary>
     [McpServerTool(Name = "playwright_fetch_site", ReadOnly = true, OpenWorld = true)]
@@ -45,5 +46,5 @@ public sealed class PageTools(PageReading pages, BatchReading batches, SiteReadi
         [Description(ToolDescriptions.FetchSiteSeconds)] int seconds = Limits.DefaultSiteSeconds,
         [Description(ToolDescriptions.FetchSiteCharacters)] int maxCharactersEach = Limits.DefaultSiteCharactersEach,
         CancellationToken cancellationToken = default) =>
-        ToolAnswer.From(await sites.ReadAsync(url, maxPages, maxDepth, seconds, maxCharactersEach, cancellationToken), AnswerShape.None);
+        ToolAnswer.From<SiteRead, SiteRead>(await sites.ReadAsync(url, maxPages, maxDepth, seconds, maxCharactersEach, cancellationToken), AnswerFields.Of, AnswerFields.Of, AnswerShape.None);
 }

@@ -13,7 +13,7 @@ namespace Snail.MCP.Playwright.Application;
 public sealed class SiteReading(ICrawler crawler, AddressRules rules)
 {
     /// <summary>What the site says, as far as the ceilings allowed, and why the walk ended.</summary>
-    public async Task<Answer<JsonNode>> ReadAsync(
+    public async Task<Answer<SiteRead>> ReadAsync(
         string url,
         int maxPages,
         int maxDepth,
@@ -28,10 +28,11 @@ public sealed class SiteReading(ICrawler crawler, AddressRules rules)
 
         var scope = crawler.ScopeOf(start) with { MaxPages = maxPages, MaxDepth = maxDepth, Budget = TimeSpan.FromSeconds(seconds) };
         var report = await crawler.CrawlAsync(scope, cancellationToken);
+        var walked = Walked(report, maxCharactersEach);
 
         return report.Stop is CrawlStop.Refused
-            ? Answer.Failed(Messages.CrawlStops[CrawlStop.Refused], WhyRefused(report), TypeOf(report), Described(report, maxCharactersEach))
-            : Answer.Ok<JsonNode>(Described(report, maxCharactersEach));
+            ? Answer.Failed(Messages.CrawlStops[CrawlStop.Refused], WhyRefused(report), TypeOf(report)).WithDetails(walked)
+            : Answer.Ok(walked);
     }
 
     private AnswerFailure? Refusal(Link start, int maxPages, int maxDepth, int seconds, int maxCharactersEach)
@@ -60,37 +61,8 @@ public sealed class SiteReading(ICrawler crawler, AddressRules rules)
     private static string? WhyRefused(CrawlReport report) =>
         report.Pages.FirstOrDefault(page => !page.IsSuccess)?.Failure is { } failure ? Messages.HintFor(failure) : null;
 
-    private static JsonObject Described(CrawlReport report, int maxCharactersEach) => new()
-    {
-        ["start"] = report.Start.Text,
-        ["stop"] = report.Stop.ToString(),
-        ["stopMeans"] = Messages.CrawlStops[report.Stop],
-        ["isFromSitemap"] = report.IsFromSitemap,
-        ["seconds"] = (long)report.Elapsed.TotalSeconds,
-        ["read"] = report.Read,
-        ["pages"] = new JsonArray([.. report.Pages.Where(page => page.IsSuccess).Select(page => Described(page.Value, maxCharactersEach))]),
-        ["failed"] = new JsonArray([.. report.Pages.Where(page => !page.IsSuccess).Select(page => Described(page.Failure!))])
-    };
-
-    private static JsonNode Described(CrawlPage page, int maxCharactersEach)
-    {
-        string text = Piece.Cut(page.Text, 0, maxCharactersEach);
-
-        return new JsonObject
-        {
-            ["url"] = page.Address.Text,
-            ["title"] = page.Title,
-            ["depth"] = page.Depth,
-            ["characters"] = new JsonObject { ["returned"] = text.Length, ["total"] = page.OriginalLength },
-            ["text"] = text
-        };
-    }
-
-    private static JsonNode Described(PageFailure failure) => new JsonObject
-    {
-        ["url"] = failure.Address?.Text,
-        ["kind"] = failure.Kind.ToString(),
-        ["status"] = failure.StatusCode,
-        ["error"] = Messages.Said(failure)
-    };
+    private static SiteRead Walked(CrawlReport report, int maxCharactersEach) => new(
+        report,
+        [.. report.Pages.Where(page => page.IsSuccess).Select(page => new SitePage(page.Value, Piece.Cut(page.Value.Text, 0, maxCharactersEach)))],
+        [.. report.Pages.Where(page => !page.IsSuccess).Select(page => page.Failure!)]);
 }

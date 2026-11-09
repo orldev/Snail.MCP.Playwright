@@ -11,7 +11,7 @@ namespace Snail.MCP.Playwright.Application;
 public sealed class PageExtraction(PageReading pages, AddressRules rules, IMarkupSelection selection)
 {
     /// <summary>What the expression matches in the page: the text of each element, or one attribute of each.</summary>
-    public async Task<Answer<JsonNode>> SelectAsync(string url, string? xpath, string? css, string? attribute, int limit, CancellationToken cancellationToken = default)
+    public async Task<Answer<PiecesSelected>> SelectAsync(string url, string? xpath, string? css, string? attribute, int limit, CancellationToken cancellationToken = default)
     {
         var address = Link.Of(url ?? string.Empty);
 
@@ -21,21 +21,13 @@ public sealed class PageExtraction(PageReading pages, AddressRules rules, IMarku
         var outcome = await pages.PageAsync(address, cancellationToken);
 
         if (!outcome.TryGetValue(out var page))
-            return PageReading.Refused(outcome.Failure!);
+            return PageReading.Refused(outcome.Failure);
 
         var expression = string.IsNullOrWhiteSpace(css) ? Expression.XPath(xpath!.Trim()) : Expression.Css(css.Trim());
         var selected = selection.Take(page.Html, expression, Named(attribute), page.Final.Address ?? address.Address!, limit);
 
         return selected.IsValid
-            ? Answer.Ok<JsonNode>(new JsonObject
-            {
-                ["url"] = page.Final.Text,
-                ["title"] = page.Title,
-                ["matched"] = selected.Matched,
-                ["returned"] = selected.Pieces.Count,
-                ["note"] = selected.Matched == 0 ? Messages.NothingSelected : null,
-                ["pieces"] = new JsonArray([.. selected.Pieces.Select(piece => (JsonNode)piece)])
-            })
+            ? Answer.Ok(new PiecesSelected(page, selected))
             : FailureTypes.Refused(Messages.ExpressionInvalid(expression, selected.Fault!)) with { Hint = Messages.ExpressionHint };
     }
 

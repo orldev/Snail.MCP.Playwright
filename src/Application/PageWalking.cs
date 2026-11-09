@@ -1,6 +1,5 @@
 using Snail.MCP.Playwright.Tools.Prompts;
 using Snail.Toolkit.Web;
-using Snail.Toolkit.Web.Scraping;
 using Snail.Toolkit.Web.Scraping.Agent;
 
 namespace Snail.MCP.Playwright.Application;
@@ -14,7 +13,7 @@ namespace Snail.MCP.Playwright.Application;
 public sealed class PageWalking(IPageAgent agent, AddressRules rules)
 {
     /// <summary>The text of the page after the moves were made, or the move the site did not answer.</summary>
-    public async Task<Answer<JsonNode>> PerformAsync(string url, IReadOnlyList<Move>? moves, int maxCharacters, CancellationToken cancellationToken = default)
+    public async Task<Answer<PageWalked>> PerformAsync(string url, IReadOnlyList<Move>? moves, int maxCharacters, CancellationToken cancellationToken = default)
     {
         var address = Link.Of(url ?? string.Empty);
 
@@ -25,8 +24,8 @@ public sealed class PageWalking(IPageAgent agent, AddressRules rules)
         var outcome = await agent.PerformAsync(errand, cancellationToken);
 
         return outcome.TryGetValue(out var page)
-            ? Answer.Ok<JsonNode>(Described(page, maxCharacters))
-            : Answer.Failed(Messages.Walked(outcome.Failure!), Messages.WalkHintFor(outcome.Failure!), FailureTypes.Of(outcome.Failure!.Kind), Described(outcome.Failure!));
+            ? Answer.Ok(new PageWalked(page, Piece.Cut(page.Text, 0, maxCharacters)))
+            : Answer.Failed(Messages.Walked(outcome.Failure), Messages.WalkHintFor(outcome.Failure), FailureTypes.Of(outcome.Failure.Kind)).WithDetails(new WalkStopped(outcome.Failure));
     }
 
     private AnswerFailure? Refusal(Link address, IReadOnlyList<Move>? moves, int maxCharacters)
@@ -120,26 +119,4 @@ public sealed class PageWalking(IPageAgent agent, AddressRules rules)
 
         return false;
     }
-
-    private static JsonObject Described(PageContent page, int maxCharacters)
-    {
-        string text = Piece.Cut(page.Text, 0, maxCharacters);
-
-        return new JsonObject
-        {
-            ["url"] = page.Final.Text,
-            ["title"] = page.Title,
-            ["status"] = page.StatusCode,
-            ["characters"] = new JsonObject { ["returned"] = text.Length, ["total"] = page.Text.Length },
-            ["isCut"] = text.Length < page.Text.Length,
-            ["text"] = text
-        };
-    }
-
-    private static JsonObject Described(PageFailure failure) => new()
-    {
-        ["url"] = failure.Address?.Text,
-        ["kind"] = failure.Kind.ToString(),
-        ["status"] = failure.StatusCode
-    };
 }

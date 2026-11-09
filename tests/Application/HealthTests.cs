@@ -23,9 +23,9 @@ public sealed class HealthTests
 
         var answer = await health.ReportAsync();
 
-        Assert.True(answer.IsSuccess);
-        Assert.False(answer.Value!["browser"]!["isReachable"]!.GetValue<bool>());
-        Assert.Contains("Permission denied", answer.Value["browser"]!["error"]!.GetValue<string>(), StringComparison.Ordinal);
+        Assert.True(answer.TryGet(out var report));
+        Assert.False(report.Browser.IsReachable);
+        Assert.Contains("Permission denied", report.Browser.Error, StringComparison.Ordinal);
     }
 
     /// <summary>The caller changing its mind is not a state of the browser, and must not be reported as one.</summary>

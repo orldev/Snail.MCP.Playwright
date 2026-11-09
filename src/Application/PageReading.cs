@@ -8,7 +8,7 @@ namespace Snail.MCP.Playwright.Application;
 public sealed class PageReading(IPageReader reader, AddressRules rules, PageMemory memory)
 {
     /// <summary>The text of the page from <paramref name="from"/> on, as much of it as one answer may carry.</summary>
-    public async Task<Answer<JsonNode>> ReadAsync(string url, int from, int maxCharacters, CancellationToken cancellationToken = default)
+    public async Task<Answer<PagePiece>> ReadAsync(string url, int from, int maxCharacters, CancellationToken cancellationToken = default)
     {
         var address = Link.Of(url ?? string.Empty);
 
@@ -37,8 +37,8 @@ public sealed class PageReading(IPageReader reader, AddressRules rules, PageMemo
     }
 
     /// <summary>A failed read as an answer: what happened, and what it calls for.</summary>
-    public static Answer<JsonNode> Refused(PageFailure failure) =>
-        Answer.Failed(Messages.Said(failure), Messages.HintFor(failure), FailureTypes.Of(failure.Kind), Described(failure));
+    public static AnswerFailure Refused(PageFailure failure) =>
+        Answer.Failed(Messages.Said(failure), Messages.HintFor(failure), FailureTypes.Of(failure.Kind)).WithDetails(failure);
 
     private AnswerFailure? Refusal(Link address, int from, int maxCharacters)
     {
@@ -52,13 +52,4 @@ public sealed class PageReading(IPageReader reader, AddressRules rules, PageMemo
             ? FailureTypes.Refused(Messages.CharactersOutOfRange(maxCharacters))
             : null;
     }
-
-    private static JsonObject Described(PageFailure failure) => new()
-    {
-        ["url"] = failure.Address?.Text,
-        ["kind"] = failure.Kind.ToString(),
-        ["status"] = failure.StatusCode,
-        ["retryAfterSeconds"] = failure.RetryAfter is { } gap ? (long)gap.TotalSeconds : null,
-        ["isWorthRetrying"] = failure.IsTransient
-    };
 }

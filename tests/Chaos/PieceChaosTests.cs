@@ -16,11 +16,10 @@ public sealed class PieceChaosTests
     {
         var page = new PageContent(Link.Of("https://example.org/"), "<html></html>", "a😀bbbb", DateTimeOffset.UtcNow);
 
-        var answer = Piece.Of(page, 2, 500);
-        string text = answer.Value!["text"]!.GetValue<string>();
+        Assert.True(Piece.Of(page, 2, 500).TryGet(out var piece));
 
-        Assert.DoesNotContain('�', text);
-        Assert.StartsWith("😀", text, StringComparison.Ordinal);
-        Assert.Equal(1, answer.Value["characters"]!["from"]!.GetValue<int>());
+        Assert.DoesNotContain('�', piece.Text);
+        Assert.StartsWith("😀", piece.Text, StringComparison.Ordinal);
+        Assert.Equal(1, piece.From);
     }
 }

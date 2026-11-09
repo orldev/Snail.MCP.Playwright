@@ -1,6 +1,7 @@
 using Snail.MCP.Playwright.Application;
 using Snail.MCP.Playwright.Configuration;
 using Snail.MCP.Playwright.Domain;
+using Snail.MCP.Playwright.Tools;
 using Snail.Toolkit.Web.Search;
 
 namespace Snail.MCP.Playwright.Tests.Application;
@@ -16,10 +17,10 @@ public sealed class LinkSearchTests
 
         var answer = await new LinkSearch(search, new ServerConfig()).FindAsync(["postgresql documentation"], 10);
 
-        Assert.True(answer.IsSuccess);
-        Assert.Equal("https://www.postgresql.org/docs/", answer.Value!["results"]![0]!["url"]!.GetValue<string>());
-        Assert.Equal("Bing", answer.Value["engines"]![0]!["engine"]!.GetValue<string>());
-        Assert.Null(answer.Value["note"]);
+        Assert.True(answer.TryGet(out var found));
+        Assert.Equal("https://www.postgresql.org/docs/", Assert.Single(found.Offered).Address.Text);
+        Assert.Equal("Bing", Assert.Single(found.Attempts).Provider);
+        Assert.False(found.IsNothingMatched);
     }
 
     /// <summary>
@@ -33,7 +34,8 @@ public sealed class LinkSearchTests
 
         var answer = await new LinkSearch(search, new ServerConfig()).FindAsync(["anything"], 10);
 
-        var result = answer.Value!["results"]![0]!.AsObject();
+        Assert.True(answer.TryGet(out var found));
+        var result = AnswerFields.Of(Assert.Single(found.Offered));
 
         Assert.Equal(["engine", "snippet", "title", "url"], [.. result.Select(field => field.Key).Order(StringComparer.Ordinal)]);
         Assert.InRange(result["snippet"]!.GetValue<string>().Length, 1, Limits.SnippetCharacters + 1);
@@ -46,8 +48,9 @@ public sealed class LinkSearchTests
 
         var answer = await new LinkSearch(search, new ServerConfig()).FindAsync(["anything"], 3);
 
-        Assert.Equal(3, answer.Value!["results"]!.AsArray().Count);
-        Assert.Equal(12, answer.Value["found"]!.GetValue<int>());
+        Assert.True(answer.TryGet(out var found));
+        Assert.Equal(3, found.Offered.Count);
+        Assert.Equal(12, found.Found);
     }
 
     /// <summary>Nothing found and nobody answered read identically as an empty list and call for opposite reactions.</summary>
@@ -58,9 +61,9 @@ public sealed class LinkSearchTests
 
         var answer = await new LinkSearch(search, new ServerConfig()).FindAsync(["zxqv"], 10);
 
-        Assert.True(answer.IsSuccess);
-        Assert.Empty(answer.Value!["results"]!.AsArray());
-        Assert.Contains("nothing matched", answer.Value["note"]!.GetValue<string>(), StringComparison.Ordinal);
+        Assert.True(answer.TryGet(out var found));
+        Assert.Empty(found.Offered);
+        Assert.Contains("nothing matched", AnswerFields.Of(found)["note"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -73,8 +76,11 @@ public sealed class LinkSearchTests
         Assert.False(answer.IsSuccess);
         Assert.Contains("no search engine answered", answer.Error, StringComparison.Ordinal);
         Assert.Contains("resting", answer.Hint, StringComparison.Ordinal);
-        Assert.Equal("Resting", answer.Details!["engines"]![0]!["failure"]!.GetValue<string>());
-        Assert.StartsWith("2026-10-04T12:30:00", answer.Details["engines"]![0]!["opensAt"]!.GetValue<string>(), StringComparison.Ordinal);
+        Assert.True(answer.TryGetDetails<LinksFound>(out var found));
+        var engine = AnswerFields.Of(Assert.Single(found.Attempts));
+
+        Assert.Equal("Resting", engine["failure"]!.GetValue<string>());
+        Assert.StartsWith("2026-10-04T12:30:00", engine["opensAt"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
     [Fact]

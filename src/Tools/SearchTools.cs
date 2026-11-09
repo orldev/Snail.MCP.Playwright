@@ -17,5 +17,5 @@ public sealed class SearchTools(LinkSearch search)
         [Description(ToolDescriptions.SearchQueries)] string[] queries,
         [Description(ToolDescriptions.SearchLimit)] int limit = Limits.DefaultResults,
         CancellationToken cancellationToken = default) =>
-        ToolAnswer.From(await search.FindAsync(queries, limit, cancellationToken), AnswerShape.None);
+        ToolAnswer.From<LinksFound, LinksFound>(await search.FindAsync(queries, limit, cancellationToken), AnswerFields.Of, AnswerFields.Of, AnswerShape.None);
 }
