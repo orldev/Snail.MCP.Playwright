@@ -5,8 +5,8 @@
   </PropertyGroup>
   <ItemGroup Label="Runtime">
     <PackageVersion Include="Fizzler.Systems.HtmlAgilityPack" Version="1.2.1" />
-    <PackageVersion Include="ModelContextProtocol" Version="2.3.1" />
-    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.3.1" />
+    <PackageVersion Include="ModelContextProtocol" Version="2.4.0" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.4.0" />
   </ItemGroup>
   <!-- Snail.Toolkit.Web, released together: the three move as one version. -->
   <ItemGroup Label="Toolkit">
