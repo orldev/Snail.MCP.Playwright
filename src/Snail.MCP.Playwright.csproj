@@ -24,7 +24,6 @@
         <PackageReference Include="ModelContextProtocol.AspNetCore"/>
     </ItemGroup>
 
-    <!-- Bundled in packages/ until the toolkit is published; tools/pack-toolkit.sh rebuilds them. -->
     <ItemGroup>
         <PackageReference Include="Snail.Toolkit.Web.Scraping.Agent"/>
         <PackageReference Include="Snail.Toolkit.Web.Search.Browser"/>
@@ -34,5 +33,25 @@
     <ItemGroup>
         <InternalsVisibleTo Include="Snail.MCP.Playwright.Tests"/>
     </ItemGroup>
+
+    <!--
+        Playwright copies the Node driver of the machine that builds, so a tool package packed on the Linux runner would
+        not start on a Mac. The package carries the drivers of the platforms a client runs on; osx-x64 is left out to
+        keep it under nuget.org's size limit (all five: 204 MB). A build for one runtime, the image's, keeps its own.
+    -->
+    <PropertyGroup Condition="'$(_IsPacking)' == 'true' AND '$(RuntimeIdentifier)' == ''">
+        <PlaywrightPlatform>linux-x64;linux-arm64;osx-arm64;win-x64</PlaywrightPlatform>
+    </PropertyGroup>
+
+    <!--
+        Playwright ships PowerShell scripts that install browsers on Windows. This server drives a browser server it
+        does not install, and NuGet refuses scripts inside a tool package (NU5111), so they are left out of what is
+        published: the package and the image alike.
+    -->
+    <Target Name="LeaveOutPlaywrightScripts" AfterTargets="ComputeResolvedFilesToPublishList">
+        <ItemGroup>
+            <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.ps1'"/>
+        </ItemGroup>
+    </Target>
 
 </Project>
